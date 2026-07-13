@@ -1,0 +1,67 @@
+# Polymarket API verification — 2026-07-13
+
+> Result of STATUS.md "Next up #1". Verified live against public endpoints on 2026-07-13.
+> **Verdict: GO for F1.** Resolved markets, resolution outcomes, and price history are all
+> available at usable granularity via public read-only APIs. No keys needed.
+
+## 1. Gamma API — market metadata + resolutions
+
+Base: `https://gamma-api.polymarket.com`
+
+### `GET /markets` — the workhorse
+Useful params (all verified): `closed=true`, `active`, `tag_id`, `limit` (**max 100/page**),
+`offset`, `order` + `ascending`, `volume_num_min`, `end_date_min` / `end_date_max`, `slug`.
+
+Fields we need, all present per market:
+| Need | Field | Notes |
+|------|-------|-------|
+| Identifiers | `id`, `conditionId`, `clobTokenIds` | `clobTokenIds` is a JSON-encoded string array `[yesToken, noToken]` |
+| Resolution outcome | `outcomePrices` | JSON-encoded string, e.g. `["0", "1"]` = second outcome won. Populated on resolved markets |
+| Lifecycle | `createdAt`, `startDate`, `endDate`, `closedTime` | `closedTime` ≈ resolution time |
+| Volume/liquidity | `volumeNum`, `volume24hr`, `liquidityNum` | occasionally `None` on tiny markets |
+| Classification | `tag_id` filter, `question`, `slug`, `events` | |
+
+### Tags (verified by slug lookup `GET /tags/slug/{slug}`)
+- `21` = Crypto, `235` = Bitcoin. Macro tags exist (`102000` macro-indicators etc.).
+
+### Pagination caveat (important)
+Plain `offset` paging stops returning data at **offset ≈ 2,100** for `closed=true&tag_id=21`
+(returns a residual 2 rows beyond that). This is an API cap, not the true total.
+**Workaround (verified):** window by `end_date_min`/`end_date_max` and page within each
+window. This is how the connector must enumerate ≥1000 resolved markets.
+
+## 2. CLOB API — price history + order book
+
+Base: `https://clob.polymarket.com`
+
+### `GET /prices-history?market={clobTokenId}`
+- `interval=max&fidelity=10` → full market life at **~10-minute steps** (verified: 552
+  points spanning a 4-day market, first point ~23 min after market creation).
+- `fidelity=1` with `interval=max` is silently floored to ~10-min steps.
+- **1-minute granularity works with explicit windows:** `startTs={epoch}&endTs={epoch}&fidelity=1`
+  → verified 60-second steps. So fine granularity = iterate windows.
+- Point format: `{"t": epochSeconds, "p": price}`. Price = last/mid in [0,1].
+
+### `GET /book?token_id={clobTokenId}` (for F2 live collector)
+Returns `bids`/`asks` arrays of `{price, size}`, ms `timestamp`, `tick_size`,
+`min_order_size`, `neg_risk`, `last_trade_price`. Verified on an active market.
+Book is **live-only** — depth is not preserved historically, confirming ADR-0003's
+split (theses C/D/E need the live collector).
+
+## 3. Implications for F1
+
+- ≥1000 resolved crypto markets: **feasible** — ~2,100 reachable via offset alone on tag 21;
+  date-windowing unlocks the rest. Note the population is heavily diluted by 5-minute
+  "Bitcoin Up or Down" markets (thousands; treat as the control group per PRD §6, or filter
+  by question pattern / duration).
+- Reference-model inputs per snapshot (implied prob at time t, TTE) are reconstructable from
+  `prices-history` + `endDate`.
+- What history does NOT give: bid/ask spread and depth (book is live-only). F1's fee model
+  must therefore **assume** a spread cost — pin it in `config/settings.yaml` (open item in
+  STATUS.md stands).
+- Rate limits: not hit during verification (~30 requests). Unknown ceiling — connector still
+  needs retry + backoff per PRD F2.
+
+## 4. Not verified (deliberately)
+- Binance REST/klines — well-documented public API, no verification needed before use.
+- Polymarket subgraph — not needed; Gamma + CLOB cover F1's requirements.

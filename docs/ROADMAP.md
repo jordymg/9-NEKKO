@@ -4,7 +4,7 @@
 
 ## Phase 0 — Edge Discovery (CURRENT) — kill date 2026-08-12
 Goal: produce a data-backed falsifiable thesis, or kill the project.
-- [ ] Verify Polymarket historical API fields (granularity, resolved markets, price history) — depends on: —
+- [x] Verify Polymarket historical API fields (granularity, resolved markets, price history) — done 2026-07-13, see `docs/API-VERIFICATION.md`
 - [ ] Connector: Polymarket (read-only) — depends on: API verification
 - [ ] Connector: Binance (spot, klines, realized vol) — depends on: —
 - [ ] Reference probability model (lognormal baseline) — depends on: Binance connector

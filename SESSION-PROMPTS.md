@@ -22,6 +22,7 @@ Constraints: work only within the current phase in `docs/ROADMAP.md`. Anything o
 We're closing this session. Update the project docs:
 1. Update `docs/STATUS.md`: "Last updated" line, move completed items to Done, rewrite "Next up" for a cold start, update Blocked, append a Session log row.
 2. Capture decisions: any significant decision → new `docs/decisions/NNNN-title.md` (ADR format), referenced in the session log.
-3. Check `docs/ROADMAP.md`: tick completed tasks; if the phase exit criterion is met, mark the next phase CURRENT.
-4. Show me the diff of what you changed before finishing.
+3. Check `docs/ROADMAP.md`: tick completed tasks; if the phase exit criterion is met, mark the next phase CURRENT. When ticking a completed task, add a markdown link to its detailed doc if one exists (e.g., API verification → API-VERIFICATION.md).
+4. Append an entry to `BITACORA.md` (repo root): 3-4 sentences in very simple Spanish, no jargon, explaining what was done this session and why it matters, written for someone with zero trading or programming knowledge.
+5. Show me the diff of what you changed before finishing.
 ---

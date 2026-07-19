@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS backtest_snapshots (
     strike REAL,
     ts INTEGER NOT NULL,
     tte_hours REAL,
+    duration_hours REAL,
     implied_mid REAL,
     ref_spot REAL,
     ref_vol REAL,
@@ -39,8 +40,8 @@ CREATE TABLE IF NOT EXISTS resolutions (
 
 _SNAPSHOT_COLS = (
     "run_id", "market_id", "question", "asset", "kind", "strike", "ts",
-    "tte_hours", "implied_mid", "ref_spot", "ref_vol", "model_prob",
-    "market_volume", "outcome",
+    "tte_hours", "duration_hours", "implied_mid", "ref_spot", "ref_vol",
+    "model_prob", "market_volume", "outcome",
 )
 
 

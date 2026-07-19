@@ -30,7 +30,7 @@ OFFSET_SAFE_MAX = 1500
 _session = requests.Session()
 
 
-def _get(url: str, params: dict[str, Any] | None = None, retries: int = 5) -> Any:
+def _get(url: str, params: dict[str, Any] | None = None, retries: int = 9) -> Any:
     """GET with retry + exponential backoff (handles rate limits / 5xx)."""
     backoff = 1.0
     for attempt in range(retries):
@@ -48,13 +48,13 @@ def _get(url: str, params: dict[str, Any] | None = None, retries: int = 5) -> An
                 raise
             log.warning("GET %s failed (%s), retry in %.0fs", url, exc, backoff)
             time.sleep(backoff)
-            backoff *= 2
+            backoff = min(backoff * 2, 60.0)  # cortes de red duran minutos, no segundos
         except (requests.RequestException, ValueError) as exc:
             if attempt == retries - 1:
                 raise
             log.warning("GET %s failed (%s), retry in %.0fs", url, exc, backoff)
             time.sleep(backoff)
-            backoff *= 2
+            backoff = min(backoff * 2, 60.0)  # cortes de red duran minutos, no segundos
 
 
 def _json_field(raw: str | None) -> list:

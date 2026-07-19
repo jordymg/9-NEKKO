@@ -35,8 +35,14 @@ window. This is how the connector must enumerate ≥1000 resolved markets.
 Base: `https://clob.polymarket.com`
 
 ### `GET /prices-history?market={clobTokenId}`
+- **CAVEAT (found 2026-07-19)**: `interval=max` returns an EMPTY history for older
+  resolved markets (observed on early-June markets queried mid-July) while explicit
+  `startTs/endTs` windows still return full data for the same token. Always use
+  explicit windows for historical work. Responses also truncate at **~1,000 points**
+  — pick fidelity so the window stays under that.
 - `interval=max&fidelity=10` → full market life at **~10-minute steps** (verified: 552
-  points spanning a 4-day market, first point ~23 min after market creation).
+  points spanning a 4-day market, first point ~23 min after market creation) — but see
+  caveat above: only reliable for recently-closed markets.
 - `fidelity=1` with `interval=max` is silently floored to ~10-min steps.
 - **1-minute granularity works with explicit windows:** `startTs={epoch}&endTs={epoch}&fidelity=1`
   → verified 60-second steps. So fine granularity = iterate windows.

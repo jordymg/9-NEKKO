@@ -13,6 +13,29 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-19 (noche) — La máquina completa funcionó por primera vez de punta a punta
+
+Por primera vez todo el circuito anduvo junto y sin caerse: bajó 470 apuestas ya terminadas,
+calculó cuánto debería haber valido cada una, comparó eso con lo que pasó de verdad y guardó
+todo ordenado. Los primeros números parecen decir que la gente paga de más por estas
+apuestas, pero todavía no nos los creemos: casi todas las apuestas revisadas son de la misma
+semana de junio, y si esa semana el mercado anduvo mal, todas se equivocan juntas — sería
+como juzgar a un heladero mirando solo una semana de lluvia. La próxima sesión revisamos
+apuestas repartidas en varios meses distintos y verificamos a mano que estamos leyendo bien
+quién ganó cada apuesta, antes de sacar cualquier conclusión.
+
+## 2026-07-19 — Construimos la máquina de medir y la pusimos a trabajar
+
+Armamos las tres piezas que faltaban: un programa que baja de internet los datos de miles de
+apuestas ya terminadas, una fórmula que calcula cuánto *debería* valer cada apuesta según
+cómo se venía moviendo el Bitcoin, y un comparador que cruza las dos cosas contra lo que
+realmente pasó. También averiguamos con precisión cuánto cuesta operar (la comisión del
+sitio más la diferencia entre precio de compra y de venta) para descontarlo siempre: una
+"ventaja" que no cubre esos costos no sirve de nada. La primera prueba chica funcionó bien;
+la revisión grande de seis meses arrancó pero se cortó a mitad de camino por una falla de
+internet, así que la próxima sesión empieza por hacer la máquina más resistente a cortes y
+volver a correrla.
+
 ## 2026-07-13 — Luz verde: los datos que necesitamos existen y son gratis
 
 Comprobamos que Polymarket deja bajar gratis, sin pedir permiso ni cuenta, el historial de

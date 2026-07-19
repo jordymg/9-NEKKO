@@ -5,10 +5,10 @@
 ## Phase 0 — Edge Discovery (CURRENT) — kill date 2026-08-12
 Goal: produce a data-backed falsifiable thesis, or kill the project.
 - [x] Verify Polymarket historical API fields (granularity, resolved markets, price history) — done 2026-07-13, see [API-VERIFICATION.md](API-VERIFICATION.md)
-- [ ] Connector: Polymarket (read-only) — depends on: API verification
-- [ ] Connector: Binance (spot, klines, realized vol) — depends on: —
-- [ ] Reference probability model (lognormal baseline) — depends on: Binance connector
-- [ ] F1 historical backtest → bias table over ≥1000 resolved markets — depends on: connectors + model
+- [x] Connector: Polymarket (read-only) — done 2026-07-18, [connectors/polymarket.py](../connectors/polymarket.py)
+- [x] Connector: Binance (spot, klines, realized vol) — done 2026-07-18, [connectors/binance.py](../connectors/binance.py)
+- [x] Reference probability model (lognormal baseline) — done 2026-07-19, [models/probability_model.py](../models/probability_model.py)
+- [ ] F1 historical backtest → bias table over ≥1000 resolved markets — pipeline runs end-to-end ([backtest/historical.py](../backtest/historical.py), 2,186 snapshots, GROSS table); pending: decorrelated multi-month resample + Up/Down convention check before any conclusion; scope v1 = European binaries + Up/Down control (ADR-0006)
 - [ ] Decision checkpoint: which theses survive the historical test? — depends on: F1
 - [ ] F2 live collector running ≥14 days — depends on: connectors (can start in parallel with F1 analysis)
 - [ ] F3 analysis → THESIS.md or KILL.md — depends on: F1 + F2

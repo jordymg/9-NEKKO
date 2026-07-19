@@ -1,0 +1,32 @@
+# NEKKO — parámetros de configuración (Phase 0)
+# Regla del PRD: toda ventaja reportada es NETA de estos costos. Nunca bruta.
+
+fees:
+  # Comisión Polymarket (verificado 2026-07-18 contra docs.polymarket.com/trading/fees):
+  #   fee_usd = shares * taker_fee_rate * p * (1 - p)   [p = precio de la share]
+  # Solo paga el taker; makers pagan 0. Cripto: feeRate = 0.07
+  # (efectivo máximo ~1.75% del notional en p=0.50, decrece hacia los extremos).
+  # Nota: las fees se introdujeron a fines de 2025; mercados históricos anteriores
+  # operaban sin fee, pero el backtest aplica el esquema ACTUAL porque la pregunta
+  # es si la ventaja sería explotable HOY.
+  taker_fee_rate_crypto: 0.07
+  maker_fee_rate: 0.0
+
+spread:
+  # El historial de precios no conserva bid/ask (libro es live-only), así que el
+  # costo de ejecución se ASUME. Base empírica: muestreo en vivo 2026-07-18 sobre
+  # 42 mercados cripto activos con mid en [0.05, 0.95]:
+  #   spread mediana = 0.01 | p75 = 0.02 (estable entre bandas de volumen 1k-100k)
+  # Convención del backtest: la serie histórica se trata como mid; una entrada
+  # taker ejecuta a mid + assumed_spread/2 (y la salida a mid - assumed_spread/2).
+  assumed_spread: 0.02             # escenario base (p75, conservador)
+  assumed_spread_optimistic: 0.01  # mediana — solo para análisis de sensibilidad
+  execution_style: taker           # cruzar el spread; sin supuestos de maker fills
+
+markets:
+  # Filtros para F1/F2. Tag ids verificados en docs/API-VERIFICATION.md.
+  tag_crypto: 21
+  tag_bitcoin: 235
+  # Los "Up or Down" de 5 min inundan la muestra; son grupo de control (PRD §6).
+  control_group_question_pattern: "Up or Down"
+  price_band_analysis: [0.05, 0.95]  # fuera de esto el spread relativo domina

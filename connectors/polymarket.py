@@ -36,10 +36,19 @@ def _get(url: str, params: dict[str, Any] | None = None, retries: int = 5) -> An
     for attempt in range(retries):
         try:
             resp = _session.get(url, params=params, timeout=30)
-            if resp.status_code == 429 or resp.status_code >= 500:
-                resp.raise_for_status()
+            if 400 <= resp.status_code < 500 and resp.status_code != 429:
+                resp.raise_for_status()  # error del cliente: reintentar no ayuda
             resp.raise_for_status()
             return resp.json()
+        except requests.HTTPError as exc:
+            if exc.response is not None and 400 <= exc.response.status_code < 500 \
+                    and exc.response.status_code != 429:
+                raise
+            if attempt == retries - 1:
+                raise
+            log.warning("GET %s failed (%s), retry in %.0fs", url, exc, backoff)
+            time.sleep(backoff)
+            backoff *= 2
         except (requests.RequestException, ValueError) as exc:
             if attempt == retries - 1:
                 raise

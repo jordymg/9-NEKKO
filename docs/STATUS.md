@@ -18,7 +18,7 @@
 
 ## Blocked / waiting
 - Weekly time budget undefined (only the kill date constrains scope) — Jordi to define
-- Fee model parameters (Polymarket fee schedule + **assumed** spread cost — API verification confirmed spread is not reconstructable from history) — needs Jordi's sign-off on the assumption before F1 reports net edge
+- ~~Fee model parameters~~ RESOLVED 2026-07-18: pinned in `config/settings.yaml` — taker fee crypto 7% × p(1-p) (official docs), assumed spread 0.02 base / 0.01 optimistic (measured live on 42 active crypto books)
 
 ## Session log
 | Date | Tool used | What happened | Decisions made (→ ADR#) |

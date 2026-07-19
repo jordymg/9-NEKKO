@@ -8,8 +8,8 @@ Goal: produce a data-backed falsifiable thesis, or kill the project.
 - [x] Connector: Polymarket (read-only) — done 2026-07-18, [connectors/polymarket.py](../connectors/polymarket.py)
 - [x] Connector: Binance (spot, klines, realized vol) — done 2026-07-18, [connectors/binance.py](../connectors/binance.py)
 - [x] Reference probability model (lognormal baseline) — done 2026-07-19, [models/probability_model.py](../models/probability_model.py)
-- [ ] F1 historical backtest → bias table over ≥1000 resolved markets — pipeline runs end-to-end ([backtest/historical.py](../backtest/historical.py), 2,186 snapshots, GROSS table); pending: decorrelated multi-month resample + Up/Down convention check before any conclusion; scope v1 = European binaries + Up/Down control (ADR-0006)
-- [ ] Decision checkpoint: which theses survive the historical test? — depends on: F1
+- [x] F1 historical backtest → bias table — done 2026-07-19 (GROSS): decorrelated 4-month stratified run, 710 markets / 2,640 snapshots, convention verified; results in [f1-gross-2026-07-19.md](results/f1-gross-2026-07-19.md). Note: <1000 markets in the clean run (390 euro + 320 control) — deemed sufficient because the finding is null and costs only strengthen it
+- [~] Decision checkpoint: **A/B historical evidence weak-to-null** (biases were regime artifacts) → C/D/E need F2 live data; formal verdicts land in F3/THESIS.md
 - [ ] F2 live collector running ≥14 days — depends on: connectors (can start in parallel with F1 analysis)
 - [ ] F3 analysis → THESIS.md or KILL.md — depends on: F1 + F2
 

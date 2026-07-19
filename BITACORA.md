@@ -13,6 +13,18 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-19 (tarde-noche 2) — Probamos con cuatro meses distintos para que una mala semana no nos engañe
+
+Primero verificamos a mano, apuesta por apuesta contra los precios reales del Bitcoin, que
+estábamos leyendo bien quién ganó cada una: perfecto, seis de seis. Después repetimos la
+medición pero repartiendo las apuestas entre marzo, abril, mayo y junio, para que ninguna
+semana rara domine el resultado. Y la señal que nos había entusiasmado desapareció: el
+"pagan de más" que veíamos era espejismo — cada mes da un numerito distinto que cambia de
+signo, como el clima, y en promedio no hay nada aprovechable. Esto no es un fracaso: es la
+máquina funcionando bien y evitándonos apostar plata a un espejismo. Lo que sigue es medir
+lo que el pasado no guarda — los precios de compra y venta en vivo — que es donde todavía
+pueden esconderse las otras teorías.
+
 ## 2026-07-19 (noche) — La máquina completa funcionó por primera vez de punta a punta
 
 Por primera vez todo el circuito anduvo junto y sin caerse: bajó 470 apuestas ya terminadas,

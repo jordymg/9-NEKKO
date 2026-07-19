@@ -68,6 +68,28 @@ split (theses C/D/E need the live collector).
 - Rate limits: not hit during verification (~30 requests). Unknown ceiling — connector still
   needs retry + backoff per PRD F2.
 
-## 4. Not verified (deliberately)
+## 4. Up/Down outcome-convention verification (2026-07-19, session 3)
+
+Manual check of the `control_updown` outcome parsing (`outcome=1` ⇔ first outcome "Up"
+won ⇔ price rose over the market window). Method: `eventStartTime`→`endDate` window from
+Gamma, Binance BTCUSDT 1m klines over that window, direction = close(last candle) ≥
+open(first candle), compared against stored outcome. **Result: 6/6 MATCH — convention
+verified, prior bias signs are valid.**
+
+| market_id | window (UTC) | Binance Δ | dir | stored |
+|-----------|--------------|-----------|-----|--------|
+| 2399127 | 2026-06-01 01:50–01:55 | −193.74 | 0 | 0 ✓ |
+| 2399200 | 2026-06-01 02:00–02:05 | +77.09 | 1 | 1 ✓ |
+| 2398870 | 2026-06-01 00:30–00:35 | −42.57 | 0 | 0 ✓ |
+| 2399110 | 2026-06-01 01:45–01:50 | +65.73 | 1 | 1 ✓ |
+| 2399032 | 2026-06-01 01:20–01:25 | +1.50 | 1 | 1 ✓ |
+| 2399095 | 2026-06-01 01:35–01:40 | −12.09 | 0 | 0 ✓ |
+
+Notes: (a) official resolution source is the **Chainlink BTC/USD data stream**, not
+Binance — Binance direction agreed 6/6 anyway, incl. clear moves; borderline ties
+(rule: "Up" if end ≥ start) could still diverge between sources. (b) `eventStartTime`
+field on Gamma markets gives the window open directly — no need to parse question text.
+
+## 5. Not verified (deliberately)
 - Binance REST/klines — well-documented public API, no verification needed before use.
 - Polymarket subgraph — not needed; Gamma + CLOB cover F1's requirements.

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Iterator
 
 import requests
@@ -102,22 +102,32 @@ def _fetch_markets_page(params: dict[str, Any]) -> list[dict]:
     return data if isinstance(data, list) else []
 
 
+def _as_dt(d: date | datetime) -> datetime:
+    return d if isinstance(d, datetime) else datetime(d.year, d.month, d.day)
+
+
+def _fmt_dt(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def iter_resolved_markets(
     tag_id: int,
-    end_date_min: date,
-    end_date_max: date,
+    end_date_min: date | datetime,
+    end_date_max: date | datetime,
     window_days: int = 7,
     min_volume: float | None = None,
 ) -> Iterator[dict]:
     """Enumerate resolved (closed) markets for a tag, windowed by endDate.
 
-    Windowing works around the ~2,100-row offset cap; if a single window still
-    hits OFFSET_SAFE_MAX rows it is split in half recursively. Markets whose
-    endDate sits exactly on a window boundary can appear twice — dedupe here.
+    Windowing works around the ~2,100-row offset cap. Gamma accepts DATETIME
+    bounds (verified 2026-07-19), so windows that still hit OFFSET_SAFE_MAX are
+    split in half recursively down to 1 hour — full coverage even on days
+    flooded by ~2,800 five-minute markets. Markets whose endDate sits exactly
+    on a window boundary can appear twice — deduped here.
     """
     seen: set[str] = set()
 
-    def _window(lo: date, hi: date) -> Iterator[dict]:
+    def _window(lo: datetime, hi: datetime) -> Iterator[dict]:
         offset = 0
         while True:
             params: dict[str, Any] = {
@@ -125,8 +135,8 @@ def iter_resolved_markets(
                 "tag_id": tag_id,
                 "limit": PAGE_LIMIT,
                 "offset": offset,
-                "end_date_min": lo.isoformat(),
-                "end_date_max": hi.isoformat(),
+                "end_date_min": _fmt_dt(lo),
+                "end_date_max": _fmt_dt(hi),
                 "order": "endDate",
                 "ascending": "true",
             }
@@ -142,9 +152,9 @@ def iter_resolved_markets(
                 return
             offset += PAGE_LIMIT
             if offset >= OFFSET_SAFE_MAX:
-                if (hi - lo).days <= 1:
+                if hi - lo <= timedelta(hours=1):
                     log.warning(
-                        "window %s..%s exceeds %d rows at 1 day; results may be incomplete",
+                        "window %s..%s exceeds %d rows at 1h; results may be incomplete",
                         lo, hi, OFFSET_SAFE_MAX,
                     )
                     return
@@ -153,9 +163,10 @@ def iter_resolved_markets(
                 yield from _window(mid, hi)
                 return
 
-    lo = end_date_min
-    while lo < end_date_max:
-        hi = min(lo + timedelta(days=window_days), end_date_max)
+    lo = _as_dt(end_date_min)
+    end = _as_dt(end_date_max)
+    while lo < end:
+        hi = min(lo + timedelta(days=window_days), end)
         yield from _window(lo, hi)
         lo = hi
 

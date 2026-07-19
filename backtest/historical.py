@@ -24,7 +24,7 @@ import logging
 import re
 import time
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 import yaml
@@ -214,14 +214,12 @@ def _sample_control(m: dict, run_id: str) -> list[dict]:
     }]
 
 
-def collect(start: date, end: date, settings: dict, conn,
-            max_markets: int, control_max: int) -> tuple[list[dict], dict]:
+def _enumerate_window(start, end, settings: dict, stats: dict,
+                      euro_cap: int, control_cap: int) -> tuple[list[dict], list[dict]]:
+    """Enumera una ventana con cupos; corta apenas ambos cupos se llenan."""
     tag = settings["markets"]["tag_crypto"]
-    stats = {"markets_seen": 0, "euro": 0, "control": 0, "skipped_barrier": 0,
-             "skipped_other": 0, "no_data": 0, "sampled": 0}
     euro: list[dict] = []
     control: list[dict] = []
-
     for m in polymarket.iter_resolved_markets(tag, start, end, min_volume=1000):
         stats["markets_seen"] += 1
         spec = parse_market(m["question"])
@@ -235,12 +233,30 @@ def collect(start: date, end: date, settings: dict, conn,
             continue
         mm = {**m, **spec}
         if spec["kind"] == "control_updown":
-            if len(control) < control_max:
+            if len(control) < control_cap:
                 control.append(mm)
-        elif len(euro) < max_markets:
+        elif len(euro) < euro_cap:
             euro.append(mm)
-        if len(euro) >= max_markets and len(control) >= control_max:
+        if len(euro) >= euro_cap and len(control) >= control_cap:
             break
+    return euro, control
+
+
+def _month_weeks(month: str) -> list[tuple[date, date]]:
+    """'2026-03' → sub-ventanas semanales que cubren el mes."""
+    y, mo = (int(x) for x in month.split("-"))
+    first = date(y, mo, 1)
+    nxt = date(y + 1, 1, 1) if mo == 12 else date(y, mo + 1, 1)
+    weeks, lo = [], first
+    while lo < nxt:
+        hi = min(lo + timedelta(days=7), nxt)
+        weeks.append((lo, hi))
+        lo = hi
+    return weeks
+
+
+def _process(euro: list[dict], control: list[dict], conn,
+             stats: dict) -> list[dict]:
     stats["euro"], stats["control"] = len(euro), len(control)
 
     caches: dict[str, KlineCache] = {}
@@ -272,7 +288,47 @@ def collect(start: date, end: date, settings: dict, conn,
         stats["sampled"] += len(rows)
         if (i + 1) % 50 == 0:
             log.info("procesados %d/%d mercados (%d snapshots)", i + 1, len(todo), len(all_rows))
-    return all_rows, stats
+    return all_rows
+
+
+def collect(start: date, end: date, settings: dict, conn,
+            max_markets: int, control_max: int) -> tuple[list[dict], dict]:
+    """Modo simple: una sola ventana start..end con cupos globales."""
+    stats = _new_stats()
+    euro, control = _enumerate_window(start, end, settings, stats, max_markets, control_max)
+    return _process(euro, control, conn, stats), stats
+
+
+def collect_stratified(months: list[str], settings: dict, conn,
+                       euro_per_month: int, control_per_month: int) -> tuple[list[dict], dict]:
+    """Muestreo DECORRELACIONADO: cupos por semana dentro de cada mes, para que
+    ninguna semana (ni ningún régimen puntual de mercado) domine la muestra.
+    Motivación: la corrida 2026-07-19 quedó agrupada en una sola semana de junio
+    y sus sesgos aparentes quedaron confundidos con la deriva del régimen.
+    """
+    stats = _new_stats()
+    euro: list[dict] = []
+    control: list[dict] = []
+    for month in months:
+        weeks = _month_weeks(month)
+        e_wc = -(-euro_per_month // len(weeks))      # ceil
+        c_wc = -(-control_per_month // len(weeks))
+        got_e = got_c = 0
+        for lo, hi in weeks:
+            e, c = _enumerate_window(
+                lo, hi, settings, stats,
+                min(e_wc, euro_per_month - got_e),
+                min(c_wc, control_per_month - got_c),
+            )
+            euro.extend(e); control.extend(c)
+            got_e += len(e); got_c += len(c)
+        log.info("mes %s: %d euro, %d control", month, got_e, got_c)
+    return _process(euro, control, conn, stats), stats
+
+
+def _new_stats() -> dict:
+    return {"markets_seen": 0, "euro": 0, "control": 0, "skipped_barrier": 0,
+            "skipped_other": 0, "no_data": 0, "sampled": 0}
 
 
 def bias_tables(df: pd.DataFrame, settings: dict, gross: bool) -> dict[str, pd.DataFrame]:
@@ -321,33 +377,55 @@ def bias_tables(df: pd.DataFrame, settings: dict, gross: bool) -> dict[str, pd.D
             out[name] = (e.groupby(keys, observed=True)
                          .apply(_agg, include_groups=False).round(4))
 
-    c = df[(df["kind"] == "control_updown") & df["implied_mid"].between(lo, hi)]
+    c = df[(df["kind"] == "control_updown") & df["implied_mid"].between(lo, hi)].copy()
     if len(c):
         ctrl = (c.groupby("liq_band", observed=True)
                 .agg(n=("outcome", "size"), implied=("implied_mid", "mean"),
                      freq_real=("outcome", "mean")).round(4))
         ctrl["sesgo_impl"] = (ctrl["implied"] - ctrl["freq_real"]).round(4)
         out["control_updown"] = ctrl
+        # calibración del control POR MES: si el sesgo pooled no reaparece mes a
+        # mes, era artefacto del período y no una propiedad del mercado
+        c["mes"] = pd.to_datetime(c["ts"], unit="ms").dt.strftime("%Y-%m")
+        pm = (c.groupby("mes")
+              .agg(n=("outcome", "size"), implied=("implied_mid", "mean"),
+                   freq_real=("outcome", "mean")).round(4))
+        pm["sesgo_impl"] = (pm["implied"] - pm["freq_real"]).round(4)
+        pooled = pd.DataFrame({
+            "n": [len(c)], "implied": [c["implied_mid"].mean()],
+            "freq_real": [c["outcome"].mean()],
+        }, index=["POOLED"]).round(4)
+        pooled["sesgo_impl"] = (pooled["implied"] - pooled["freq_real"]).round(4)
+        out["control_updown_por_mes"] = pd.concat([pm, pooled])
     return out
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser()
-    ap.add_argument("--start", required=True, type=date.fromisoformat)
-    ap.add_argument("--end", required=True, type=date.fromisoformat)
+    ap.add_argument("--start", type=date.fromisoformat)
+    ap.add_argument("--end", type=date.fromisoformat)
+    ap.add_argument("--months", help="modo estratificado: ej. 2026-03,2026-04,2026-05,2026-06")
+    ap.add_argument("--euro-per-month", type=int, default=100)
+    ap.add_argument("--control-per-month", type=int, default=80)
     ap.add_argument("--max-markets", type=int, default=350)
     ap.add_argument("--control-max", type=int, default=120)
     ap.add_argument("--gross", action="store_true",
                     help="números BRUTOS sin fee/spread (solo exploración)")
     ap.add_argument("--db", default=store.DEFAULT_DB)
     args = ap.parse_args()
+    if not args.months and not (args.start and args.end):
+        ap.error("hace falta --months o --start/--end")
 
     settings = load_settings()
     conn = store.connect(args.db)
     t0 = time.time()
-    rows, stats = collect(args.start, args.end, settings, conn,
-                          args.max_markets, args.control_max)
+    if args.months:
+        rows, stats = collect_stratified(args.months.split(","), settings, conn,
+                                         args.euro_per_month, args.control_per_month)
+    else:
+        rows, stats = collect(args.start, args.end, settings, conn,
+                              args.max_markets, args.control_max)
     log.info("stats: %s | %.0fs", stats, time.time() - t0)
     if not rows:
         print("Sin snapshots — nada que analizar.")

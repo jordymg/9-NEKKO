@@ -90,6 +90,13 @@ Binance — Binance direction agreed 6/6 anyway, incl. clear moves; borderline t
 (rule: "Up" if end ≥ start) could still diverge between sources. (b) `eventStartTime`
 field on Gamma markets gives the window open directly — no need to parse question text.
 
-## 5. Not verified (deliberately)
+## 5. Binance desde IP de EE.UU. (found 2026-07-20, deploy VPS)
+`api.binance.com` responde **HTTP 451** (geo-block) desde la IP de Oracle Phoenix.
+El mirror oficial de market data **`data-api.binance.vision`** sirve los mismos
+endpoints públicos (`/api/v3/ping`, `/ticker/price`, `/klines`) sin bloqueo —
+verificado desde el VPS. El conector usa la env var `NEKKO_BINANCE_BASE` (seteada
+en el unit de systemd); local sigue en `api.binance.com`.
+
+## 6. Not verified (deliberately)
 - Binance REST/klines — well-documented public API, no verification needed before use.
 - Polymarket subgraph — not needed; Gamma + CLOB cover F1's requirements.

@@ -2,10 +2,13 @@
 
 > AI agents: read this FIRST. It's the live state of the project. Update it at the end of every session (see session-close prompt).
 
-**Last updated:** 2026-07-19 (session 4, intermediate close) — F2 collector built + verified live (53 markets, grid + event triggers, gaps table, status panel). **VPS deployment mid-flight**: Oracle Cloud account + network ready; instance creation blocked tonight by "Out of capacity" — retry tomorrow. Local collector deliberately stopped; the official 14-day window starts when the VPS collector is green.
+**Last updated:** 2026-07-20 — **F2 COLLECTOR LIVE ON THE VPS.** Oracle `VM.Standard.E2.1.Micro` (1GB), systemd `Restart=always`, kill/restart verified, threshold 0.3%, 70 markets, RAM headroom 556MB. **The official ≥14-day window started 2026-07-20 ~14:31 UTC** → completes ~2026-08-03, inside the kill date with margin for F3.
 **Current phase:** Phase 0 — Edge Discovery (kill date **2026-08-12**)
 
 ## Done (recent)
+- 2026-07-20 (s5) VPS live: instancia `E2.1.Micro` (A1 siguió sin capacidad), Ubuntu 24.04, UTC, venv liviano (requests+pyyaml, sin pandas). Servicio systemd activo; **kill/restart verificado** (kill -9 → systemd revive, NRestarts=1, panel vuelve a OK). Panel remoto y pull de DB (`sqlite3 .backup` + scp) probados de punta a punta desde local
+- 2026-07-20 (s5) Hallazgo API: `api.binance.com` da **451 desde IP de EE.UU.** → conector con base configurable (`NEKKO_BINANCE_BASE`) usando el mirror oficial `data-api.binance.vision` (verificado; API-VERIFICATION §5)
+- 2026-07-20 (s5) Deploy por `git archive` + scp (el repo es privado; sin credenciales en el servidor, coherente con ADR-0007). Redeploy = repetir ese comando
 - 2026-07-19 (s4) F2 collector built + live-verified: grid 5 min sobre 53 mercados (≥50 PRD), event triggers por movimiento de spot (ejercitado: 318 test + eventos reales a 0.3%), backfill de resoluciones, tabla `gaps`. Panel `python -m analysis.status` (veredicto OK/STALE/DOWN) + README en español
 - 2026-07-19 (s4) Data hygiene ANTES de la corrida oficial: `collector_runs` + vista `snapshots_valid` cercan los 318 snapshots de evento con umbral de prueba; `resolutions.source` separa backfills del colector vs backtest (panel cuenta solo colector)
 - 2026-07-19 (s4) ADR-0007 (deploy) + assets: `deploy/nekko-collector.service` (systemd Restart=always), clave SSH dedicada generada, README con panel vía SSH y pull de DB con `sqlite3 .backup` (nunca git)
@@ -24,15 +27,11 @@
 - 2026-07-12 Project renamed QUANT-EDGE → NEKKO (pre-commit, no history impact)
 - 2026-07-12 Kickoff complete: VALIDATION.md (5 candidate theses + gates), PRD (graded B), architecture, roadmap, 4 ADRs
 
-## Next up — TOMORROW: create the Oracle instance and go live (TIME-CRITICAL)
-State: account + network done (see Done s4). Instance creation blocked tonight by **"Out of capacity"** on `VM.Standard.A1.Flex` in AD-1 (PHX). The 14-day window needs the collector green by **~2026-07-28**.
-1. Create instance: **retry A1** (1 OCPU / 6GB config already validated end-to-end incl. SSH key + public IP assignment) → fallback **`VM.Standard.E2.1.Micro`** (x86, 1GB RAM — collector must stay lean; it is: stdlib + requests + pyyaml, no pandas in the collector path).
-2. Then execute the pending VPS handoff: SSH in → `apt install python3-venv sqlite3` → clone repo → venv + `pip install -r requirements.txt` (+ pyyaml) → timezone UTC → install `deploy/nekko-collector.service` → `systemctl enable --now`.
-3. **Kill/restart verification**: kill the process, confirm systemd revives it, panel returns to OK, threshold at production 0.3%.
-4. Leave the long run going — official 14-day window starts there (local collector already stopped on purpose; no gap accounting before the VPS start).
-5. ~48h later: data-quality check (grid completeness, event counts at real threshold, gap review, first C/D/E sanity peek).
-
-While it collects: F3 groundwork over `nekko.sqlite` (A/B verdicts writable from F1 evidence). Icebox: barrier family; low-liquidity euro residual (underpowered).
+## Next up
+1. **~2026-07-22 (48h del colector): data-quality check** sobre una copia traída con el comando del README: completitud de grilla (esperadas ~288 tandas/día), conteo de eventos con umbral real 0.3%, revisión de `gaps`, RAM disponible estable, y primer vistazo sanitario a datos para tesis C/D/E (spreads y profundidad por segmento).
+2. F3 groundwork mientras junta datos: veredictos formales A/B (supported/rejected/insufficient, formato VALIDATION.md) — escribibles ya desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
+3. Operación: el panel es `ssh nekko-vps "cd 9-NEKKO && .venv/bin/python -m analysis.status"`. Si hay cambios de código para el VPS: `git archive` + scp + `sudo systemctl restart nekko-collector` (repo privado, sin credenciales en el server).
+4. Icebox: familia barrera; residuo ilíquido euro (underpowered).
 
 ## Evidence pointers
 - Negative finding + per-month tables: `docs/results/f1-gross-2026-07-19.md` (run `76188a8592e2` in `nekko.sqlite`)
@@ -50,3 +49,4 @@ While it collects: F3 groundwork over `nekko.sqlite` (A/B verdicts writable from
 | 2026-07-19 (2) | Claude Code | Vertical slice end-to-end: control group, duration segments, incremental persistence, patient retries; found + fixed `interval=max` empty-history API caveat (documented); run Jun→Jul: 2,186 snapshots into `nekko.sqlite`; first GROSS bias table — confounded by temporal clustering, NOT validated | — |
 | 2026-07-19 (3) | Claude Code | Convention check 6/6 (API-VERIFICATION §4); sub-day enumeration fix + stratified sampling; 4-month run (710 markets, 2,640 snapshots): biases did NOT survive decorrelation → no Thesis A candidate, A/B evidence weak-to-null (`docs/results/f1-gross-2026-07-19.md`); pivot to F2 per pre-agreed decision logic | — |
 | 2026-07-19 (4) | Claude Code + Jordi | F2 collector + status panel built and live-verified; data hygiene (test fence, resolution sources); deploy prep (systemd unit, SSH key, README ops). Oracle Cloud account + VCN/subnet/IGW/route built by hand; instance blocked by A1 "Out of capacity" → retry mañana. Local collector stopped on purpose; 14-day clock starts on VPS | 0007 |
+| 2026-07-20 (5) | Claude Code + Jordi | VPS live en `E2.1.Micro`: setup completo por SSH, systemd, kill/restart verificado, panel OK (70 mercados, 556MB libres). Fix geo-block Binance (451 → mirror `data-api.binance.vision`). Deploy por archive+scp (repo privado). **Ventana de 14 días iniciada 2026-07-20 ~14:31 UTC** | — |

@@ -13,6 +13,16 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-20 — La cámara quedó encendida en la nube
+
+Hoy sí: conseguimos la computadora en la nube (la chica, porque la grande seguía agotada) y
+dejamos la cámara grabando. Hubo un obstáculo curioso: Binance no atiende visitas desde
+Estados Unidos, donde vive nuestro servidor — pero tiene una puerta oficial solo-para-mirar
+que funciona perfecto, y por ahí entramos. Antes de irnos la probamos a lo bruto: matamos el
+programa a propósito y el servidor lo revivió solo en segundos, que es exactamente lo que
+tiene que pasar si algo falla a las 3 de la mañana. El reloj de las dos semanas de filmación
+arrancó hoy; en dos días le hacemos el primer control de calidad a lo grabado.
+
 ## 2026-07-19 (noche 2) — Alquilamos una computadora en la nube; nos quedamos en la puerta
 
 Construimos la "cámara" que va a filmar los precios en vivo durante dos semanas (y un

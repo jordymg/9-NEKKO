@@ -13,6 +13,15 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-19 (noche 2) — Alquilamos una computadora en la nube; nos quedamos en la puerta
+
+Construimos la "cámara" que va a filmar los precios en vivo durante dos semanas (y un
+tablero de control: un solo comando dice si está grabando o se cayó). Como no puede
+depender de nuestra compu de casa — que se apaga, se suspende y se corta — alquilamos una
+computadora en la nube (gratis, en Oracle) y armamos su conexión a internet pieza por
+pieza. Nos quedamos en la puerta: no había máquinas disponibles esta noche. Mañana
+reintentamos — la cámara arranca a filmar sus dos semanas apenas encienda.
+
 ## 2026-07-19 (tarde-noche 2) — Probamos con cuatro meses distintos para que una mala semana no nos engañe
 
 Primero verificamos a mano, apuesta por apuesta contra los precios reales del Bitcoin, que

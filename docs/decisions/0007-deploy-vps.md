@@ -10,8 +10,12 @@ El colector F2 necesita ≥14 días consecutivos sin pérdida de datos antes del
 la app; (2) precedente del 2026-07-19: un corte de DNS local mató la corrida histórica
 larga. ARCHITECTURE §1 ya contemplaba "collector can move to a VPS if uptime suffers".
 
+> **Update 2026-07-19 (noche):** proveedor elegido = **Oracle Cloud Always Free** (home
+> region PHX) — costo baja a $0; el resto de la decisión no cambia (systemd, descartable,
+> sin secretos). Primer intento de instancia A1 bloqueado por capacidad; ver STATUS.
+
 ## Decision
-VPS mínimo (~5 USD/mes, Ubuntu 24.04, instancia más chica del proveedor que elija Jordi).
+VPS mínimo (~5 USD/mes o free tier equivalente, Ubuntu 24.04, instancia más chica del proveedor que elija Jordi).
 Colector bajo **systemd** con `Restart=always` + `RestartSec`, timezone UTC, logs a
 journald. Sin secretos en el servidor (solo APIs públicas de lectura, ADR-0002); la única
 credencial es la clave SSH de acceso. La DB se trae a demanda con `sqlite3 .backup` +

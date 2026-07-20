@@ -14,6 +14,8 @@ ExecStart=/home/ubuntu/9-NEKKO/.venv/bin/python -m collector.live_collector
 Restart=always
 RestartSec=15
 Environment=PYTHONUNBUFFERED=1
+# IP de Oracle US: binance.com da 451; el mirror oficial de market data no
+Environment=NEKKO_BINANCE_BASE=https://data-api.binance.vision
 
 [Install]
 WantedBy=multi-user.target

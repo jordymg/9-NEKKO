@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import time
 from typing import Any, Iterator
 
@@ -15,7 +16,10 @@ import requests
 
 log = logging.getLogger(__name__)
 
-BASE = "https://api.binance.com"
+# api.binance.com geo-bloquea IPs de EE.UU. (HTTP 451). data-api.binance.vision
+# es el endpoint publico oficial de market data (mismos datos, solo lectura) y
+# no esta bloqueado — el VPS de Oracle (Phoenix) lo usa via esta env var.
+BASE = os.environ.get("NEKKO_BINANCE_BASE", "https://api.binance.com")
 
 KLINES_MAX_LIMIT = 1000  # API cap per request
 

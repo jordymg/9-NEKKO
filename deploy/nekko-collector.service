@@ -1,15 +1,16 @@
 # NEKKO F2 — unit de systemd para el colector (ADR-0007)
-# Instalación: copiar a /etc/systemd/system/, luego
-#   systemctl daemon-reload && systemctl enable --now nekko-collector
+# Instancia: Oracle E2.1.Micro, user default 'ubuntu'.
+# Instalación: sudo cp deploy/nekko-collector.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nekko-collector
 [Unit]
 Description=NEKKO F2 live collector (Polymarket/Binance, read-only)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=nekko
-WorkingDirectory=/home/nekko/9-NEKKO
-ExecStart=/home/nekko/9-NEKKO/.venv/bin/python -m collector.live_collector
+User=ubuntu
+WorkingDirectory=/home/ubuntu/9-NEKKO
+ExecStart=/home/ubuntu/9-NEKKO/.venv/bin/python -m collector.live_collector
 Restart=always
 RestartSec=15
 Environment=PYTHONUNBUFFERED=1

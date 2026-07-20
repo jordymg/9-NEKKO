@@ -77,7 +77,24 @@ def build_panel(db_path: str) -> str:
     for ts_start, reason in open_gaps[:5]:
         lines.append(f"{'':<4}gap desde {_fmt_ts(ts_start)}  motivo: {reason or '-'}")
     lines.append(f"{'resoluciones (colector)':<26}{resolutions}")
+    mem = _mem_line()
+    if mem:
+        lines.append(mem)
     return "\n".join(lines)
+
+
+def _mem_line() -> str | None:
+    """RAM disponible (solo Linux, vía /proc/meminfo) — la E2.1.Micro tiene 1GB."""
+    try:
+        info: dict[str, int] = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                key, val = line.split(":", 1)
+                info[key] = int(val.strip().split()[0])  # kB
+        avail, total = info["MemAvailable"] // 1024, info["MemTotal"] // 1024
+        return f"{'ram disponible':<26}{avail} MB de {total} MB"
+    except (OSError, KeyError, ValueError):
+        return None
 
 
 def main() -> None:

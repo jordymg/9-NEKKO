@@ -23,6 +23,15 @@ spread:
   assumed_spread_optimistic: 0.01  # mediana — solo para análisis de sensibilidad
   execution_style: taker           # cruzar el spread; sin supuestos de maker fills
 
+collector:
+  grid_interval_s: 300       # snapshot de grilla fija cada 5 min (PRD F2)
+  spot_check_s: 30           # chequeo de spot Binance entre grillas
+  event_move_pct: 0.3        # % de movimiento del spot que dispara snapshot extra
+  universe_refresh_s: 900    # refresco del universo de mercados activos
+  min_volume_24h: 1000       # filtro de mercados a trackear
+  max_markets: 80            # tope de mercados simultáneos (PRD pide >=50)
+  depth_band_pct: 5          # profundidad del libro: USDC dentro de ±5% del mid
+
 markets:
   # Filtros para F1/F2. Tag ids verificados en docs/API-VERIFICATION.md.
   tag_crypto: 21

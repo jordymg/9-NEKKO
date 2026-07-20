@@ -82,6 +82,33 @@ CREATE TABLE IF NOT EXISTS collector_runs (
     note TEXT                     -- 'test-*' => sus snapshots 'event' se excluyen
 );
 
+-- Operaciones virtuales del paper engine (ADR-0008). Append-only: una posición
+-- es un op 'open' + un op 'close'/'settle' con el mismo position_id.
+CREATE TABLE IF NOT EXISTS paper_ops (
+    id INTEGER PRIMARY KEY,
+    ts INTEGER NOT NULL,
+    strategy TEXT NOT NULL,
+    market_id TEXT NOT NULL,
+    token_id TEXT,
+    position_id TEXT NOT NULL,
+    action TEXT NOT NULL,          -- open | close | settle
+    side TEXT,                     -- yes | no
+    shares REAL,
+    price REAL,                    -- por share, ya con spread simulado
+    fee REAL,
+    snapshot_ts INTEGER,
+    reason TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_paper_strategy ON paper_ops (strategy);
+CREATE INDEX IF NOT EXISTS idx_paper_position ON paper_ops (position_id);
+
+-- Metadata operativa del engine (cursor de procesamiento). Como gaps.ts_end,
+-- excepción documentada al append-only: es estado, no dato de mercado.
+CREATE TABLE IF NOT EXISTS paper_state (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
 -- El análisis consume esta vista, nunca snapshots crudos: excluye los
 -- snapshots por evento generados bajo config de prueba.
 CREATE VIEW IF NOT EXISTS snapshots_valid AS
@@ -132,6 +159,10 @@ _SNAPSHOT_COLS = (
 
 def connect(path: str | Path = DEFAULT_DB) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
+    # WAL: colector (escritor) y paper engine (lector+escritor propio) conviven
+    # sin bloquearse; .backup sigue funcionando igual
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=10000")
     conn.executescript(_SCHEMA)
     # migración 2026-07-19: resoluciones distinguen origen (backtest vs colector)
     try:
@@ -158,6 +189,26 @@ def upsert_resolution(conn: sqlite3.Connection, market_id: str, outcome: int | N
         "VALUES (?, ?, ?, ?)",
         (market_id, outcome, resolved_at, source),
     )
+    conn.commit()
+
+
+def insert_paper_ops(conn: sqlite3.Connection, rows: list[dict]) -> None:
+    cols = ("ts", "strategy", "market_id", "token_id", "position_id", "action",
+            "side", "shares", "price", "fee", "snapshot_ts", "reason")
+    conn.executemany(
+        f"INSERT INTO paper_ops ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
+        [tuple(r.get(c) for c in cols) for r in rows],
+    )
+    conn.commit()
+
+
+def get_state(conn: sqlite3.Connection, key: str, default: str | None = None) -> str | None:
+    row = conn.execute("SELECT value FROM paper_state WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else default
+
+
+def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute("INSERT OR REPLACE INTO paper_state (key, value) VALUES (?, ?)", (key, value))
     conn.commit()
 
 

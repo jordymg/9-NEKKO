@@ -32,6 +32,31 @@ collector:
   max_markets: 80            # tope de mercados simultáneos (PRD pide >=50)
   depth_band_pct: 5          # profundidad del libro: USDC dentro de ±5% del mid
 
+paper:
+  # Motor detector + paper trading (ADR-0008). Modo shadow: solo lee snapshots
+  # y escribe operaciones VIRTUALES en paper_ops. No toca nada real.
+  poll_s: 60
+  stake_usdc: 50               # tamaño objetivo por posición virtual
+  max_fill_fraction: 0.25      # nunca "llenar" más del 25% de la profundidad visible
+  min_depth_usdc: 50           # sin este piso de profundidad, no hay fill
+  max_spread: 0.05             # spread mayor => mercado intocable
+  max_open_per_strategy: 10
+  strategies:
+    # DRAFT: reglas escritas ANTES de tener tesis validada. Sus KPIs no valen
+    # para ningún gate (ADR-0008). Parámetros acá, nunca hardcodeados.
+    draft_thesis_C:            # reversión por shock: spot se movió, libro quieto
+      spot_move_pct: 0.4       # movimiento mínimo de Binance entre snapshots (%)
+      stale_mid_eps: 0.005     # "libro quieto" = mid se movió menos que esto
+      lookback_s_min: 30       # ventana para comparar contra snapshot previo
+      lookback_s_max: 900
+      edge_min: 0.03           # gap modelo vs precio de entrada para disparar
+      exit_eps: 0.01           # salir cuando |modelo - mid| converge a esto
+      max_hold_s: 3600
+    draft_thesis_D:            # seguir la latencia: spot se movió, entrar ya
+      spot_move_pct: 0.4
+      edge_min: 0.02
+      hold_s: 1800
+
 markets:
   # Filtros para F1/F2. Tag ids verificados en docs/API-VERIFICATION.md.
   tag_crypto: 21

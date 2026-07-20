@@ -1,0 +1,18 @@
+# NEKKO — paper engine en modo shadow (ADR-0008)
+# Instalación: sudo cp deploy/nekko-paper.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nekko-paper
+[Unit]
+Description=NEKKO paper engine (shadow: opera de mentira sobre datos reales)
+After=network-online.target nekko-collector.service
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/9-NEKKO
+ExecStart=/home/ubuntu/9-NEKKO/.venv/bin/python -m paper.shadow
+Restart=always
+RestartSec=15
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -77,10 +77,29 @@ def build_panel(db_path: str) -> str:
     for ts_start, reason in open_gaps[:5]:
         lines.append(f"{'':<4}gap desde {_fmt_ts(ts_start)}  motivo: {reason or '-'}")
     lines.append(f"{'resoluciones (colector)':<26}{resolutions}")
+    lines.extend(_paper_lines(conn))
     mem = _mem_line()
     if mem:
         lines.append(mem)
     return "\n".join(lines)
+
+
+def _paper_lines(conn) -> list[str]:
+    """Sección del paper engine (ADR-0008). KPIs de reglas draft: NO son evidencia."""
+    try:
+        from paper.engine import kpis
+        stats = kpis(conn)
+    except Exception:
+        return []
+    if not stats:
+        return ["--- paper (shadow) ---      sin operaciones virtuales aun"]
+    lines = ["--- paper (shadow, reglas DRAFT: kpis no validos para gates) ---"]
+    for strat in sorted(stats):
+        k = stats[strat]
+        pf = f"{k['pf']:.2f}" if k["pf"] != float("inf") else "inf"
+        lines.append(f"{strat:<26}abiertas {k['n_abiertas']:<3} cerradas {k['n_cerradas']:<4} "
+                     f"PF {pf:<6} pnl {k['pnl_total']:+.2f}")
+    return lines
 
 
 def _mem_line() -> str | None:

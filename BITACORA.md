@@ -13,6 +13,17 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-20 (2) — Le agregamos un piloto de práctica
+
+Al sistema le sumamos un "piloto de práctica": un programa que opera de mentira sobre los
+datos de verdad que la cámara va grabando. Ve los mismos precios, decide como si fuera en
+serio, y anota cuánto habría ganado o perdido — pero no toca un solo dólar, y lo armamos
+para que ni siquiera exista un camino hacia dinero real. La idea: cuando algún día juegue
+con plata, que ya sepa manejar. Importante y anotado en grande: sus primeras reglas de
+decisión son borradores inventados para probar el motor, así que sus resultados no
+cuentan como evidencia de nada — primero los datos tienen que decirnos qué regla vale la
+pena, y recién después el piloto practica esa regla en serio.
+
 ## 2026-07-20 — La cámara quedó encendida en la nube
 
 Hoy sí: conseguimos la computadora en la nube (la chica, porque la grande seguía agotada) y

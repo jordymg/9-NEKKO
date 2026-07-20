@@ -2,10 +2,12 @@
 
 > AI agents: read this FIRST. It's the live state of the project. Update it at the end of every session (see session-close prompt).
 
-**Last updated:** 2026-07-20 — **F2 COLLECTOR LIVE ON THE VPS.** Oracle `VM.Standard.E2.1.Micro` (1GB), systemd `Restart=always`, kill/restart verified, threshold 0.3%, 70 markets, RAM headroom 556MB. **The official ≥14-day window started 2026-07-20 ~14:31 UTC** → completes ~2026-08-03, inside the kill date with margin for F3.
+**Last updated:** 2026-07-20 (s6) — **Paper engine (detector+paper FUSED, ADR-0008) live in shadow on the VPS** junto al colector: reglas draft C/D como plugins, fills conservadores contra el libro registrado, KPIs por estrategia en el panel. RAM con ambos servicios: 538MB libres. Ventana F2 de 14 días sigue corriendo (día 0, inició 2026-07-20 ~14:31 UTC → ~2026-08-03). **Guard epistémico: KPIs de reglas draft NO valen para gates** hasta que las reglas deriven de tesis con datos (F3).
 **Current phase:** Phase 0 — Edge Discovery (kill date **2026-08-12**)
 
 ## Done (recent)
+- 2026-07-20 (s6) Paper engine `/paper` (ADR-0008): motor shadow que consume `snapshots_valid`, simula fills conservadores (taker siempre, tope 25% de profundidad visible, piso de depth, fee ADR-0005), posiciones virtuales append-only (`paper_ops`), settle por resolución, KPIs (PF, expectancy, sharpe-op, maxDD). Estrategias plugin: `draft_thesis_C` (reversión por shock, libro quieto) y `draft_thesis_D` (seguir latencia); parámetros en config. Mecánica verificada con umbrales forzados en copia descartable (opens/settles/KPIs)
+- 2026-07-20 (s6) Deploy: segundo unit systemd `nekko-paper` corriendo en el VPS junto al colector (decisión: VPS, no local — RAM verificada con ambos: 538MB libres). SQLite en WAL para convivencia lector/escritor. Panel con sección paper rotulada "reglas DRAFT: kpis no validos para gates"
 - 2026-07-20 (s5) VPS live: instancia `E2.1.Micro` (A1 siguió sin capacidad), Ubuntu 24.04, UTC, venv liviano (requests+pyyaml, sin pandas). Servicio systemd activo; **kill/restart verificado** (kill -9 → systemd revive, NRestarts=1, panel vuelve a OK). Panel remoto y pull de DB (`sqlite3 .backup` + scp) probados de punta a punta desde local
 - 2026-07-20 (s5) Hallazgo API: `api.binance.com` da **451 desde IP de EE.UU.** → conector con base configurable (`NEKKO_BINANCE_BASE`) usando el mirror oficial `data-api.binance.vision` (verificado; API-VERIFICATION §5)
 - 2026-07-20 (s5) Deploy por `git archive` + scp (el repo es privado; sin credenciales en el servidor, coherente con ADR-0007). Redeploy = repetir ese comando
@@ -28,10 +30,11 @@
 - 2026-07-12 Kickoff complete: VALIDATION.md (5 candidate theses + gates), PRD (graded B), architecture, roadmap, 4 ADRs
 
 ## Next up
-1. **~2026-07-22 (48h del colector): data-quality check** sobre una copia traída con el comando del README: completitud de grilla (esperadas ~288 tandas/día), conteo de eventos con umbral real 0.3%, revisión de `gaps`, RAM disponible estable, y primer vistazo sanitario a datos para tesis C/D/E (spreads y profundidad por segmento).
-2. F3 groundwork mientras junta datos: veredictos formales A/B (supported/rejected/insufficient, formato VALIDATION.md) — escribibles ya desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
-3. Operación: el panel es `ssh nekko-vps "cd 9-NEKKO && .venv/bin/python -m analysis.status"`. Si hay cambios de código para el VPS: `git archive` + scp + `sudo systemctl restart nekko-collector` (repo privado, sin credenciales en el server).
-4. Icebox: familia barrera; residuo ilíquido euro (underpowered).
+1. **~2026-07-22 (48h del colector): data-quality check** sobre una copia traída con el comando del README: completitud de grilla (esperadas ~288 tandas/día), conteo de eventos con umbral real 0.3%, revisión de `gaps`, RAM estable con ambos servicios, y primer vistazo sanitario a datos para tesis C/D/E (spreads y profundidad por segmento).
+2. **Mismo check: primera revisión de resultados shadow** de las reglas draft (panel sección paper): ¿dispararon? ¿los fills simulados son plausibles contra el libro? ¿los reasons tienen sentido? Ajustar umbrales draft solo si no disparan nunca o disparan siempre — y recordar el guard: nada de leer los KPIs como evidencia.
+3. F3 groundwork mientras junta datos: veredictos formales A/B (formato VALIDATION.md) desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
+4. Operación: panel = `ssh nekko-vps "cd 9-NEKKO && .venv/bin/python -m analysis.status"`. Redeploy = `git archive` + scp + `systemctl restart` del servicio tocado (repo privado, sin credenciales en el server).
+5. Icebox: familia barrera; residuo ilíquido euro (underpowered).
 
 ## Evidence pointers
 - Negative finding + per-month tables: `docs/results/f1-gross-2026-07-19.md` (run `76188a8592e2` in `nekko.sqlite`)
@@ -50,3 +53,4 @@
 | 2026-07-19 (3) | Claude Code | Convention check 6/6 (API-VERIFICATION §4); sub-day enumeration fix + stratified sampling; 4-month run (710 markets, 2,640 snapshots): biases did NOT survive decorrelation → no Thesis A candidate, A/B evidence weak-to-null (`docs/results/f1-gross-2026-07-19.md`); pivot to F2 per pre-agreed decision logic | — |
 | 2026-07-19 (4) | Claude Code + Jordi | F2 collector + status panel built and live-verified; data hygiene (test fence, resolution sources); deploy prep (systemd unit, SSH key, README ops). Oracle Cloud account + VCN/subnet/IGW/route built by hand; instance blocked by A1 "Out of capacity" → retry mañana. Local collector stopped on purpose; 14-day clock starts on VPS | 0007 |
 | 2026-07-20 (5) | Claude Code + Jordi | VPS live en `E2.1.Micro`: setup completo por SSH, systemd, kill/restart verificado, panel OK (70 mercados, 556MB libres). Fix geo-block Binance (451 → mirror `data-api.binance.vision`). Deploy por archive+scp (repo privado). **Ventana de 14 días iniciada 2026-07-20 ~14:31 UTC** | — |
+| 2026-07-20 (6) | Claude Code | Fases 1+2 fusionadas y arrancadas YA (ADR-0008): paper engine shadow en el VPS con reglas draft C/D plugin, fills conservadores, KPIs en panel; mecánica verificada en copia descartable; WAL; RAM ok (538MB). Guard epistémico explícito | 0008 |

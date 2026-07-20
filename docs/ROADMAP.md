@@ -15,13 +15,10 @@ Goal: produce a data-backed falsifiable thesis, or kill the project.
 
 Exit criterion: THESIS.md (VALIDATION.md format, ≥300 supporting observations, edge net of costs) or KILL.md exists.
 
-## Phase 1 — Detector
-Goal: the thesis strategy computes edges in real time and logs would-be trades. No orders.
-Exit criterion: N weeks of logged opportunities; realized outcomes match predicted edge within tolerance.
-
-## Phase 2 — Paper Trading
-Goal: full simulated loop (detect → virtual buy → virtual sell → KPIs), 1000 operations.
-Exit criterion: Phase 2 → 3 gate in VALIDATION.md passes.
+## Phase 1+2 — Detector + Paper Trading (FUSED, ADR-0008 — construction started 2026-07-20 in parallel with F2)
+Goal: one module (`/paper`) detects signals AND runs the full simulated loop (detect → virtual buy → virtual sell → KPIs). No orders, shadow only.
+Status: engine live in shadow on the VPS with `draft_*` rules. **Epistemic guard: KPIs from draft rules are NOT gate-valid; the gate requires rules derived from a data-backed thesis (F3).**
+Exit criterion (unchanged from old Phase 2): 1000 simulated operations with thesis-derived rules; Phase 2 → 3 gate in VALIDATION.md passes.
 
 ## Phase 3 — Minimum capital (USD 100)
 Goal: validate execution reality — slippage, fills, latency, model degradation.

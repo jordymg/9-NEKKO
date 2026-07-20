@@ -51,9 +51,11 @@ def build_panel(db_path: str) -> str:
 
     tracked = q("SELECT COUNT(DISTINCT market_id) FROM snapshots WHERE ts >= ?",
                 (now_ms - TRACKED_WINDOW_S * 1000,)).fetchone()[0]
-    total = q("SELECT COUNT(*) FROM snapshots").fetchone()[0]
-    today = q("SELECT COUNT(*) FROM snapshots WHERE ts >= ?", (midnight_ms,)).fetchone()[0]
-    today_evt = q("SELECT COUNT(*) FROM snapshots WHERE ts >= ? AND trigger = 'event'",
+    # conteos sobre snapshots_valid: excluye los snapshots por evento generados
+    # con config de prueba (ver collector_runs / vista en storage.sqlite)
+    total = q("SELECT COUNT(*) FROM snapshots_valid").fetchone()[0]
+    today = q("SELECT COUNT(*) FROM snapshots_valid WHERE ts >= ?", (midnight_ms,)).fetchone()[0]
+    today_evt = q("SELECT COUNT(*) FROM snapshots_valid WHERE ts >= ? AND trigger = 'event'",
                   (midnight_ms,)).fetchone()[0]
     today_grid = today - today_evt
 
@@ -61,7 +63,7 @@ def build_panel(db_path: str) -> str:
                   "ORDER BY id DESC").fetchall()
     closed_today = q("SELECT COUNT(*) FROM gaps WHERE ts_end IS NOT NULL AND ts_start >= ?",
                      (midnight_ms,)).fetchone()[0]
-    resolutions = q("SELECT COUNT(*) FROM resolutions").fetchone()[0]
+    resolutions = q("SELECT COUNT(*) FROM resolutions WHERE source = 'collector'").fetchone()[0]
 
     lines = [
         "=== NEKKO — estado del colector F2 ===",
@@ -74,7 +76,7 @@ def build_panel(db_path: str) -> str:
     ]
     for ts_start, reason in open_gaps[:5]:
         lines.append(f"{'':<4}gap desde {_fmt_ts(ts_start)}  motivo: {reason or '-'}")
-    lines.append(f"{'resoluciones guardadas':<26}{resolutions}")
+    lines.append(f"{'resoluciones (colector)':<26}{resolutions}")
     return "\n".join(lines)
 
 

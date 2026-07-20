@@ -68,6 +68,33 @@ CREATE TABLE IF NOT EXISTS gaps (
     ts_end INTEGER,
     reason TEXT
 );
+
+-- Config vigente de cada arranque del colector. Permite excluir del análisis
+-- ventanas con config no-productiva (ej. umbral de evento de prueba).
+CREATE TABLE IF NOT EXISTS collector_runs (
+    id INTEGER PRIMARY KEY,
+    ts_start INTEGER NOT NULL,
+    ts_end INTEGER,               -- NULL = corrida vigente
+    event_move_pct REAL,
+    grid_interval_s INTEGER,
+    min_volume_24h REAL,
+    max_markets INTEGER,
+    note TEXT                     -- 'test-*' => sus snapshots 'event' se excluyen
+);
+
+-- El análisis consume esta vista, nunca snapshots crudos: excluye los
+-- snapshots por evento generados bajo config de prueba.
+CREATE VIEW IF NOT EXISTS snapshots_valid AS
+SELECT s.* FROM snapshots s
+WHERE NOT (
+    s.trigger = 'event'
+    AND EXISTS (
+        SELECT 1 FROM collector_runs r
+        WHERE r.note LIKE 'test%'
+          AND s.ts >= r.ts_start
+          AND (r.ts_end IS NULL OR s.ts <= r.ts_end)
+    )
+);
 """
 
 _LIVE_COLS = (
@@ -106,6 +133,12 @@ _SNAPSHOT_COLS = (
 def connect(path: str | Path = DEFAULT_DB) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.executescript(_SCHEMA)
+    # migración 2026-07-19: resoluciones distinguen origen (backtest vs colector)
+    try:
+        conn.execute("ALTER TABLE resolutions ADD COLUMN source TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # columna ya existe
     return conn
 
 
@@ -119,9 +152,22 @@ def insert_snapshots(conn: sqlite3.Connection, rows: list[dict]) -> None:
 
 
 def upsert_resolution(conn: sqlite3.Connection, market_id: str, outcome: int | None,
-                      resolved_at: str | None) -> None:
+                      resolved_at: str | None, source: str = "backtest") -> None:
     conn.execute(
-        "INSERT OR IGNORE INTO resolutions (market_id, outcome, resolved_at) VALUES (?, ?, ?)",
-        (market_id, outcome, resolved_at),
+        "INSERT OR IGNORE INTO resolutions (market_id, outcome, resolved_at, source) "
+        "VALUES (?, ?, ?, ?)",
+        (market_id, outcome, resolved_at, source),
     )
     conn.commit()
+
+
+def insert_collector_run(conn: sqlite3.Connection, ts_start: int, cfg: dict,
+                         note: str = "") -> int:
+    cur = conn.execute(
+        "INSERT INTO collector_runs (ts_start, event_move_pct, grid_interval_s, "
+        "min_volume_24h, max_markets, note) VALUES (?, ?, ?, ?, ?, ?)",
+        (ts_start, cfg.get("event_move_pct"), cfg.get("grid_interval_s"),
+         cfg.get("min_volume_24h"), cfg.get("max_markets"), note),
+    )
+    conn.commit()
+    return cur.lastrowid

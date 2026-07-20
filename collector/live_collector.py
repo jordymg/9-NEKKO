@@ -109,7 +109,7 @@ class Collector:
                     fresh = polymarket.get_market_by_slug(old["slug"])
                     if fresh and fresh["closed"] and fresh["outcome"] is not None:
                         store.upsert_resolution(self.conn, mid, fresh["outcome"],
-                                                fresh.get("closed_time"))
+                                                fresh.get("closed_time"), source="collector")
                         log.info("resolucion backfilleada %s -> %s", old["slug"], fresh["outcome"])
                 except Exception as exc:
                     log.warning("backfill fallo %s (%s)", mid, exc)
@@ -232,9 +232,14 @@ def main() -> None:
                         format="%(asctime)s %(levelname)s %(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default=store.DEFAULT_DB)
+    ap.add_argument("--note", default="", help="etiqueta de la corrida; 'test-*' excluye sus eventos del análisis")
     args = ap.parse_args()
     conn = store.connect(args.db)
-    Collector(conn, load_settings()).run()
+    settings = load_settings()
+    run_id = store.insert_collector_run(conn, int(time.time() * 1000),
+                                        settings["collector"], args.note)
+    log.info("collector_run %d registrada (note=%r)", run_id, args.note)
+    Collector(conn, settings).run()
 
 
 if __name__ == "__main__":

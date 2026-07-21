@@ -11,7 +11,7 @@ REPO=/home/ubuntu/9-NEKKO       # código + venv + DB viva del colector
 SITE=/home/ubuntu/nekko-site    # clone dedicado SOLO para publicar datos
 DB="$REPO/nekko.sqlite"
 TMP=/tmp/nekko_export.db
-export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/nekko_deploy -o IdentitiesOnly=yes"
+export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/nekko_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
 log() { echo "$(date -u +%FT%TZ) $*"; }
 

@@ -13,6 +13,18 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-21 — Una página web que se arma sola para ver todo desde el celular
+
+Le hicimos al proyecto una página web pública, pensada para leer desde el teléfono: muestra
+en qué anda todo — la fase, los hallazgos, el piloto de práctica — con un diseño oscuro y
+prolijo. Lo lindo es que se arma sola: cada vez que cambiamos algo, un robot de GitHub la
+vuelve a generar y publicar sin que toquemos nada. Pusimos especial cuidado en dos cosas de
+honestidad: los resultados del piloto de práctica salen dentro de un recuadro amarillo bien
+grande que avisa "estos números son de prueba, no cuentan", y como perdimos la llave para
+entrar al servidor en la nube, la parte del estado en vivo dice claramente "sin acceso por
+ahora" en vez de inventar números. Antes de abrirla al público revisamos que no se colara
+ninguna contraseña ni dato secreto en todo el historial del proyecto: limpio.
+
 ## 2026-07-20 (2) — Le agregamos un piloto de práctica
 
 Al sistema le sumamos un "piloto de práctica": un programa que opera de mentira sobre los

@@ -1,0 +1,4 @@
+# Archivos que se ejecutan/instalan en Linux (VM): forzar LF siempre, aunque se
+# editen desde Windows. Sin esto, git convierte a CRLF y bash/systemd/perl rompen.
+deploy/** text eol=lf
+*.sh text eol=lf

@@ -23,7 +23,10 @@ honestidad: los resultados del piloto de práctica salen dentro de un recuadro a
 grande que avisa "estos números son de prueba, no cuentan", y como perdimos la llave para
 entrar al servidor en la nube, la parte del estado en vivo dice claramente "sin acceso por
 ahora" en vez de inventar números. Antes de abrirla al público revisamos que no se colara
-ninguna contraseña ni dato secreto en todo el historial del proyecto: limpio.
+ninguna contraseña ni dato secreto en todo el historial del proyecto: limpio. Ya está
+online. Una salvedad honesta: los números en vivo del piloto todavía no se ven en la web,
+porque quedaron guardados adentro del servidor al que perdimos la llave — la página lo dice
+en vez de inventarlos, y queda pendiente conectar esa cañería cuando recuperemos el acceso.
 
 ## 2026-07-20 (2) — Le agregamos un piloto de práctica
 

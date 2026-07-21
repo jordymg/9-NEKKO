@@ -2,10 +2,12 @@
 
 > AI agents: read this FIRST. It's the live state of the project. Update it at the end of every session (see session-close prompt).
 
-**Last updated:** 2026-07-21 (s7) — **Sitio público + dashboard automatizado (GitHub Pages) construido y pusheado.** Auditoría de secretos (repo + historial): LIMPIO. Pipeline stdlib-only (`scripts/build_site.py`), diseño oscuro mobile-first, guard ADR-0008 renderizado, estado del colector como placeholder honesto. **Go-live pendiente de Jordi** (2 pasos: hacer el repo público + activar Pages con source=GitHub Actions — ver Next up). **SSH a la VM PERDIDO** (clave extraviada): el colector sigue vivo pero inalcanzable; el panel en vivo no se puede leer hasta recuperar acceso.
+**Last updated:** 2026-07-21 (s7) — **Sitio público + dashboard automatizado LIVE.** Repo hecho público y Pages activado (source=GitHub Actions) por Jordi → `https://jordymg.github.io/9-NEKKO/`. Pipeline stdlib-only, guard ADR-0008 renderizado, estado del colector como placeholder honesto; auditoría de secretos LIMPIA. **Gap confirmado (no asumir que anda):** el runner de CI nunca ve un SQLite → la sección de KPIs del paper engine renderiza vacía ("—") en producción; falta un commit path para los outputs del engine, y encima esos outputs están en la VM inalcanzable (doble dependencia). **SSH a la VM PERDIDO** (clave extraviada): colector vivo pero inalcanzable; recuperación intentada por Run Command (falló) — ver Blocked.
 **Current phase:** Phase 0 — Edge Discovery (kill date **2026-08-12**)
 
 ## Done (recent)
+- 2026-07-21 (s7) **Go-live**: Jordi hizo el repo público y activó Pages con source=GitHub Actions. Sitio en `https://jordymg.github.io/9-NEKKO/`. (Los dos primeros runs del workflow fallaron por ser previos a activar Pages; el push de este cierre dispara el primero que debería quedar verde.)
+- 2026-07-21 (s7) **Verificado — gap de KPIs en producción**: `build_site.py` lee `nekko.sqlite` (gitignoreado) para los KPIs y no hay ningún artefacto de datos versionado → en los runners de GitHub la sección paper siempre renderiza "—". No es bug de render (local sin DB también da "—"): falta el camino para que los outputs del engine lleguen al repo. Corrección definida para próxima sesión (ver Next up #1)
 - 2026-07-21 (s7) Sitio público estático + deploy 100% automático: `scripts/build_site.py` (renderer Markdown + charts SVG, **cero dependencias**, corre en CI) genera el sitio desde `docs/`; `.github/workflows/pages.yml` publica en cada push a main + cron horario vía flujo oficial de Pages (`configure-pages`/`upload-pages-artifact`/`deploy-pages`, sin rama gh-pages). Diseño oscuro mobile-first self-contained (`site/style.css`)
 - 2026-07-21 (s7) **Guard epistémico renderizado** (ADR-0008): los KPIs de reglas `draft_` solo existen dentro de un bloque `.guard` con banda de peligro "REGLAS BORRADOR — KPIs NO válidos para gates"; no hay camino de código que emita un KPI draft fuera del guard. Estado del colector = placeholder honesto ("sin acceso a la VM") con últimos valores conocidos + timestamp, slot listo para datos reales. Chart F1 (sesgo por mes, flips de signo) como SVG inline
 - 2026-07-21 (s7) **Auditoría de secretos pre-público: LIMPIO** — repo + historial completo sin claves privadas, tokens, `.env`, `nekko.sqlite` ni la IP de la VM (vivía solo en `~/.ssh/config` y el chat). `.gitignore` endurecido (build/, claves, OCI, secretos). Dos archivos basura vacíos (`cat`, `ssh-keygen`) eliminados
@@ -33,20 +35,23 @@
 - 2026-07-12 Kickoff complete: VALIDATION.md (5 candidate theses + gates), PRD (graded B), architecture, roadmap, 4 ADRs
 
 ## Next up
-1. **GO-LIVE del sitio (2 pasos de Jordi, el resto es automático)**: (a) hacer el repo público — GitHub → Settings → General → Danger Zone → Change visibility → Public (auditoría ya limpia); (b) activar Pages con source = **GitHub Actions** — Settings → Pages → Build and deployment → Source: GitHub Actions. El workflow ya está en main; al activarse corre solo y publica en `https://jordymg.github.io/9-NEKKO/`. (Pages no funciona en repo privado sin plan pago; por eso (a) va primero.) Alternativa por CLI una vez decidido: `gh repo edit jordymg/9-NEKKO --visibility public --accept-visibility-change-consequences` + `gh api -X POST repos/jordymg/9-NEKKO/pages -f build_type=workflow`.
-2. **RECUPERAR SSH a la VM** (bloquea el estado en vivo del colector): sin la clave privada no hay acceso. Opciones: consola serial/Cloud Shell de Oracle para inyectar una clave pública nueva en `~ubuntu/.ssh/authorized_keys`, o recrear instancia (perdería la ventana F2 en curso). Hasta entonces el sitio muestra la última lectura conocida.
-3. **~48h del colector (si SSH se recupera): data-quality check** sobre una copia traída con el comando del README: completitud de grilla (esperadas ~288 tandas/día), conteo de eventos con umbral real 0.3%, revisión de `gaps`, RAM estable, primer vistazo a datos C/D/E. Cuando haya DB accesible, el build lee KPIs reales del paper engine automáticamente (el slot ya está).
-2. **Mismo check: primera revisión de resultados shadow** de las reglas draft (panel sección paper): ¿dispararon? ¿los fills simulados son plausibles contra el libro? ¿los reasons tienen sentido? Ajustar umbrales draft solo si no disparan nunca o disparan siempre — y recordar el guard: nada de leer los KPIs como evidencia.
-3. F3 groundwork mientras junta datos: veredictos formales A/B (formato VALIDATION.md) desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
-4. Operación: panel = `ssh nekko-vps "cd 9-NEKKO && .venv/bin/python -m analysis.status"`. Redeploy = `git archive` + scp + `systemctl restart` del servicio tocado (repo privado, sin credenciales en el server).
-5. Icebox: familia barrera; residuo ilíquido euro (underpowered).
+1. **Commit path de los outputs del paper engine** (gap confirmado, ver Done): definir e implementar cómo llegan los KPIs al repo para que el sitio los muestre. Idea: el engine (o un script) exporta a un archivo versionado (ej. `docs/data/paper_kpis.json`) que `build_site.py` lea en vez del SQLite. OJO doble dependencia: hasta recuperar SSH no hay forma de sacar los outputs de la VM, así que la sección seguirá en "—" aunque exista el commit path. Mientras tanto el placeholder es honesto.
+2. **Alarma de CPU en Oracle** (detectar muerte del colector sin SSH): notification topic + alarm sobre la métrica `oci_computeagent` `CpuUtilization`, target email. Necesita el email de Jordi y un click de confirmación de la suscripción.
+3. **Recuperar SSH — evaluar 2da VM chica en la misma VCN** que alcance la instancia del colector por la subnet privada (`10.0.0.43`), sin tocar ni reiniciar la instancia del colector (para no perder la ventana F2). Alternativa de último recurso: recrear instancia (perdería la ventana F2 en curso).
+4. **Cuando SSH se recupere: data-quality check** (~48h de datos) sobre una copia traída con el comando del README: completitud de grilla (~288 tandas/día), eventos a umbral real 0.3%, revisión de `gaps`, RAM estable; y **primera revisión de resultados shadow** de las reglas draft (¿dispararon? ¿fills plausibles? ¿reasons con sentido?) — sin leer los KPIs como evidencia (guard ADR-0008).
+5. F3 groundwork (no depende de la VM): veredictos formales A/B (formato VALIDATION.md) desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
+6. Icebox: familia barrera; residuo ilíquido euro (underpowered).
 
 ## Evidence pointers
 - Negative finding + per-month tables: `docs/results/f1-gross-2026-07-19.md` (run `76188a8592e2` in `nekko.sqlite`)
 - Convention verification: `docs/API-VERIFICATION.md` §4
 
 ## Blocked / waiting
-- **SSH a la VM de Oracle PERDIDO** (clave privada extraviada) — colector sigue corriendo pero inalcanzable; panel en vivo y pull de DB no disponibles hasta recuperar acceso (ver Next up #2). El sitio público lo refleja honestamente como placeholder.
+- **SSH a la VM de Oracle PERDIDO** (clave privada extraviada) — colector sigue corriendo pero inalcanzable; panel en vivo y pull de DB no disponibles hasta recuperar acceso. Bloquea también los KPIs reales en el sitio (Next up #1). Intentos:
+  - **Run Command (Oracle Cloud Agent)**: plugin habilitado por CLI, pero el comando nunca salió de estado **ACCEPTED** (no ejecutó). El agente está vivo (métricas `oci_computeagent` presentes); se sospecha **presión de RAM** en el shape de 1GB.
+  - **Bastion plugin**: habilitado, sin probar todavía.
+  - **Cloud Shell**: tiene un keypair RSA funcional en `~/.ssh/id_rsa` (la pública ya está capturada en el script `addkey`), lista para inyectar apenas haya un canal que funcione.
+  - Próximo intento: Next up #3 (2da VM por subnet privada `10.0.0.43`).
 - Weekly time budget undefined (only the kill date constrains scope) — Jordi to define
 
 ## Session log

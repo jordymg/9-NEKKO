@@ -1,0 +1,52 @@
+name: Deploy site to GitHub Pages
+
+# Regenera y publica el sitio: en cada push a main y cada hora (para refrescar
+# los timestamps y, cuando se recupere el acceso a la VM y se pueda leer la DB,
+# las métricas). Cero acción humana.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "site/**"
+      - "scripts/build_site.py"
+      - "config/settings.yaml"
+      - ".github/workflows/pages.yml"
+  schedule:
+    - cron: "0 * * * *"   # cada hora en punto (UTC)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una sola publicación a la vez; no cancelar una en curso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build static site (stdlib only, no deps)
+        run: python scripts/build_site.py --out build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

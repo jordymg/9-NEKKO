@@ -13,6 +13,12 @@ ExecStart=/home/ubuntu/9-NEKKO/.venv/bin/python -m paper.shadow
 Restart=always
 RestartSec=15
 Environment=PYTHONUNBUFFERED=1
+# Guardas de memoria (hardening s8): el paper engine comparte el shape de 1GB con
+# el colector; se le acota igual para que un spike suyo tampoco dispare el OOM
+# global. Footprint similar (~40MB); holgura amplia.
+MemoryHigh=200M
+MemoryMax=300M
+MemorySwapMax=0
 
 [Install]
 WantedBy=multi-user.target

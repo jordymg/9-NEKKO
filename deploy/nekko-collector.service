@@ -16,6 +16,14 @@ RestartSec=15
 Environment=PYTHONUNBUFFERED=1
 # IP de Oracle US: binance.com da 451; el mirror oficial de market data no
 Environment=NEKKO_BINANCE_BASE=https://data-api.binance.vision
+# Guardas de memoria (hardening s8). Pico observado ~40MB (MemoryPeak). El OOM
+# del sistema mató el proceso el 2026-07-20 14:32 en el shape de 1GB. MemoryHigh
+# throttlea por reclamo antes del techo; MemoryMax lo acota a un kill de cgroup
+# controlado (systemd revive) en vez de que el OOM global elija una víctima al
+# azar. Holgura 6-9x sobre el pico: no lo starvea, degrada ante un spike.
+MemoryHigh=256M
+MemoryMax=384M
+MemorySwapMax=0
 
 [Install]
 WantedBy=multi-user.target

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -24,6 +25,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
+DATA = DOCS / "data"
+
+
+def _load_json(name: str):
+    """Lee un archivo de datos versionado (lo publica la VM). None si falta/roto."""
+    p = DATA / name
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
 
 # ---------------------------------------------------------------- navegación
 # (out_name, label, nav_key). Orden = orden en la barra.
@@ -275,6 +288,36 @@ def f1_chart_svg() -> str:
     return "".join(parts)
 
 
+def collector_section() -> str:
+    """Datos reales del colector si la VM ya publicó `collector_status.json`;
+    si no, el placeholder honesto. Mismo slot: se cambia sin rediseñar."""
+    d = _load_json("collector_status.json")
+    if not d:
+        return collector_placeholder()
+    verdict = d.get("verdict", "?")
+    ok = verdict.startswith("OK")
+    dot = "var(--pos)" if ok else "var(--warn)"
+    tiles = [
+        ("veredicto", verdict), ("mercados", d.get("markets_tracked")),
+        ("snapshots (día)", d.get("snapshots_today")), ("snapshots (total)", d.get("snapshots_total")),
+        ("eventos (día)", d.get("events_today")), ("gaps abiertos", d.get("gaps_open")),
+        ("arranques", d.get("process_starts")), ("ram libre", f"{d.get('ram_free_mb')} MB"),
+    ]
+    grid = "".join(f'<div class="metric"><div class="k">{k}</div>'
+                   f'<div class="v">{html.escape(str(v))}</div></div>' for k, v in tiles)
+    sysd = d.get("systemd") or {}
+    sys_line = (f" · systemd NRestarts={sysd.get('nrestarts')} ({sysd.get('result')})"
+                if sysd else "")
+    return f"""<div class="card">
+  <span class="placeholder__tag"><span class="dot" style="background:{dot}"></span>datos del colector · se actualiza cada ~15 min (no es tiempo real)</span>
+  <h3 style="margin:0 0 4px">Estado del colector F2</h3>
+  <p style="color:var(--muted);font-size:0.9rem;margin:0 0 14px">Último snapshot {html.escape(str(d.get('last_snapshot')))}
+     · último arranque {html.escape(str(d.get('last_start')))}{html.escape(sys_line)}.</p>
+  <div class="lastknown">{grid}</div>
+  <p class="stamp">última actualización: {html.escape(str(d.get('generated_at')))} · ventana de 14 días iniciada {COLLECTOR_LAST_KNOWN['window_start']}</p>
+</div>"""
+
+
 def collector_placeholder() -> str:
     lk = COLLECTOR_LAST_KNOWN
     tiles = [
@@ -285,11 +328,11 @@ def collector_placeholder() -> str:
     grid = "".join(f'<div class="metric"><div class="k">{k}</div>'
                    f'<div class="v">{html.escape(v)}</div></div>' for k, v in tiles)
     return f"""<div class="placeholder">
-  <span class="placeholder__tag"><span class="dot"></span>sin acceso a la VM — se completa cuando se recupere SSH</span>
+  <span class="placeholder__tag"><span class="dot"></span>esperando la primera publicación de métricas de la VM</span>
   <h3>Estado del colector F2</h3>
-  <p>La VM de Oracle sigue recolectando, pero se perdió la clave SSH: no podemos leer su
-     estado en vivo. Abajo, la <strong>última lectura conocida</strong> (no es tiempo real).
-     El slot queda listo para enchufar datos reales apenas se recupere el acceso.</p>
+  <p>Todavía no llegó el primer archivo de métricas que la VM publica por cron. Abajo, la
+     <strong>última lectura conocida</strong> (no es tiempo real). En cuanto la VM publique,
+     este bloque muestra los números reales sin rediseño.</p>
   <div class="lastknown">{grid}</div>
   <p class="stamp">última lectura: {lk['timestamp']} · ventana de 14 días iniciada {lk['window_start']}</p>
 </div>"""
@@ -315,8 +358,10 @@ def _draft_strategies() -> list[str]:
 
 def paper_panel(db_path: Path) -> str:
     """Panel de KPIs del paper engine — SIEMPRE dentro del guard para reglas draft.
-    Si no hay datos, se rotula igual; nunca se fabrican números."""
-    stats = _read_kpis(db_path)
+    Fuente: `paper_kpis.json` publicado por la VM (en CI no hay SQLite); si no
+    existe, se intenta una DB local (dev). Nunca se fabrican números."""
+    data = _load_json("paper_kpis.json")
+    stats = data.get("strategies", {}) if data else _read_kpis(db_path)
     strategies = sorted(set(_draft_strategies()) | set(stats))
     kpi_defs = [("PF", "pf", GATE_THRESHOLDS["pf"]),
                 ("Expectancy", "expectancy", GATE_THRESHOLDS["expectancy"]),
@@ -328,10 +373,11 @@ def paper_panel(db_path: Path) -> str:
         k = stats.get(strat, {})
         tiles = []
         for label, key, gate in kpi_defs:
-            if key in k:
+            if key in k and k[key] is not None:
                 val = k[key]
-                shown = f"{val:.2f}" if isinstance(val, float) and val != float("inf") \
-                    else ("∞" if val == float("inf") else str(val))
+                shown = f"{val:.2f}" if isinstance(val, float) else str(val)
+            elif key in k and k[key] is None:
+                shown = "∞"  # PF infinito (todo ganancia) serializado como null
             else:
                 shown = "—"
             tiles.append(f'<div class="kpi"><div class="k">{label}</div>'
@@ -390,7 +436,7 @@ def build_index(db_path: Path) -> str:
 <div class="section-label">Motor de práctica (paper trading · shadow)</div>
 {paper_panel(db_path)}
 <div class="section-label">Recolección en vivo</div>
-{collector_placeholder()}
+{collector_section()}
 <div class="section-label">Hallazgo F1 (backtest histórico)</div>
 {chart}""")
 

@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-07-21 17:06 UTC",
+  "verdict": "OK",
+  "last_snapshot": "2026-07-21 17:05 UTC",
+  "age_min": 0.9,
+  "markets_tracked": 57,
+  "snapshots_today": 13944,
+  "snapshots_total": 21324,
+  "grid_today": 13690,
+  "events_today": 254,
+  "gaps_open": 0,
+  "gaps_closed_today": 0,
+  "resolutions_collector": 0,
+  "process_starts": 6,
+  "last_start": "2026-07-21 06:50 UTC",
+  "systemd": {
+    "nrestarts": 0,
+    "result": "success"
+  },
+  "ram_free_mb": 508,
+  "ram_total_mb": 954
+}

@@ -309,7 +309,7 @@ def collector_section() -> str:
     sys_line = (f" · systemd NRestarts={sysd.get('nrestarts')} ({sysd.get('result')})"
                 if sysd else "")
     return f"""<div class="card">
-  <span class="placeholder__tag"><span class="dot" style="background:{dot}"></span>datos del colector · se actualiza cada ~15 min (no es tiempo real)</span>
+  <span class="placeholder__tag"><span class="dot" style="background:{dot}"></span>datos del colector · se actualiza cada hora (no es tiempo real)</span>
   <h3 style="margin:0 0 4px">Estado del colector F2</h3>
   <p style="color:var(--muted);font-size:0.9rem;margin:0 0 14px">Último snapshot {html.escape(str(d.get('last_snapshot')))}
      · último arranque {html.escape(str(d.get('last_start')))}{html.escape(sys_line)}.</p>

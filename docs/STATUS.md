@@ -2,10 +2,11 @@
 
 > AI agents: read this FIRST. It's the live state of the project. Update it at the end of every session (see session-close prompt).
 
-**Last updated:** 2026-07-21 (s8) — **Colector endurecido + sitio con DATOS REALES.** SSH nunca se perdió (clave en `~/.ssh/nekko_vps`, host `nekko-vps`) — corregido. Hardening aplicado en vivo sin gap: guardas de memoria (contra el OOM del 07-20), needrestart en list-only y sin auto-reboot. La VM exporta métricas a `docs/data/*.json` → el sitio muestra números reales (colector + KPIs paper en el guard), resolviendo el gap de KPIs en producción. Automatización por cron pendiente de UN paso de Jordi: deploy key con write access (ver Next up #1). Colector sano: OK, ~78 mercados, 0 gaps, 508MB libres.
+**Last updated:** 2026-07-21 (s8) — **Colector endurecido + sitio con DATOS REALES.** SSH nunca se perdió (clave en `~/.ssh/nekko_vps`, host `nekko-vps`) — corregido. Hardening aplicado en vivo sin gap: guardas de memoria (contra el OOM del 07-20), needrestart en list-only y sin auto-reboot. La VM exporta métricas a `docs/data/*.json` → el sitio muestra números reales (colector + KPIs paper en el guard), resolviendo el gap de KPIs en producción. **Loop completo DESATENDIDO y verificado**: colector → JSON → repo → Actions → sitio, cada hora al minuto 7 (deploy key instalado por Jordi, push verificado). Colector sano: OK, ~78 mercados, 0 gaps, 508MB libres.
 **Current phase:** Phase 0 — Edge Discovery (kill date **2026-08-12**)
 
 ## Done (recent)
+- 2026-07-21 (post-s8, Jordi) **Deploy key instalado → push automático LIVE**: clave `~/.ssh/nekko_deploy` (ed25519) en la VM, agregada en repo Settings → Deploy keys con write access. Auth verificada (`ssh -T git@github.com` → "successfully authenticated"). Corrida end-to-end de `vm_push_metrics.sh` → "push OK" (2026-07-21T17:36:14Z). Sitio sirviendo datos reales (verdict OK, 21324 snapshots, 0 gaps, 508MB, KPIs draft dentro del guard, placeholder ausente). El loop colector→JSON→repo→Actions→sitio corre solo cada hora
 - 2026-07-21 (s8) **Corrección**: SSH a la VM nunca se perdió — la privada está en `C:\Users\martin\.ssh\nekko_vps` con `~/.ssh/config` (Host `nekko-vps`). Los fallos por Cloud Shell fueron otra máquina/otra clave. Blocker retirado
 - 2026-07-21 (s8) **Hardening del colector** (findings de journalctl), aplicado en vivo SIN reiniciar (sin gap): (1) guardas de memoria en ambos units — `MemoryHigh=256M`/`MemoryMax=384M` colector, 200/300M paper, vs pico observado ~40MB; el OOM del sistema lo mató el 07-20 14:32 en el shape de 1GB, ahora degrada en vez de morir; (2) `needrestart` en list-only (`/etc/needrestart/conf.d/nekko.conf`) — no más stop/start por upgrades (causaban blips de DNS el 07-21 06:45); (3) `Unattended-Upgrade::Automatic-Reboot "false"`. **Reboot de kernel pendiente DIFERIDO a post-2026-08-03** (linux-image-6.17.0-1018-oracle): reiniciar ahora cortaría la ventana F2; el kernel nuevo queda en disco para el reboot de teardown
 - 2026-07-21 (s8) **Visibilidad de reinicios** (`analysis/status.py`): arranques del proceso (de `collector_runs`) + `NRestarts`/`Result` de systemd. Se ven sin leer journalctl (hoy: 6 arranques, último 06:50, NRestarts=0)
@@ -39,11 +40,13 @@
 - 2026-07-12 Kickoff complete: VALIDATION.md (5 candidate theses + gates), PRD (graded B), architecture, roadmap, 4 ADRs
 
 ## Next up
-1. **Deploy key para el push automático (1 paso de Jordi)** — sin esto el sitio ya muestra datos reales pero NO se auto-actualiza. En la VM: `ssh nekko-vps` → `ssh-keygen -t ed25519 -f ~/.ssh/nekko_deploy -N "" -C "nekko-vm-deploy"` → `cat ~/.ssh/nekko_deploy.pub`. Después: GitHub → repo **Settings → Deploy keys → Add deploy key**, pegar la pública, **marcar "Allow write access"**, Add. Probar ya: `bash /home/ubuntu/nekko-site/deploy/vm_push_metrics.sh` (debe terminar en "push OK"). El cron horario (min 7) ya está puesto y apunta al script del clone.
-2. **Data-quality check** (ya se puede, SSH anda) sobre una copia (`ssh nekko-vps "sqlite3 9-NEKKO/nekko.sqlite '.backup /tmp/n.bak'" && scp nekko-vps:/tmp/n.bak nekko-vps.sqlite`): completitud de grilla (~288 tandas/día), eventos a umbral real 0.3%, revisión de `gaps`, RAM estable; y **primera revisión de resultados shadow** de las reglas draft (¿dispararon? ¿fills plausibles? ¿reasons con sentido?) — sin leer los KPIs como evidencia (guard ADR-0008).
-3. F3 groundwork (no depende de la VM): veredictos formales A/B (formato VALIDATION.md) desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
-4. **Backlog — alarma de CPU en Oracle** (menor prioridad ahora que SSH anda, pero es la única forma de enterarse de una caída TOTAL de la VM): notification topic + alarm sobre `oci_computeagent` `CpuUtilization`, target email. Necesita el email de Jordi + un click de confirmación.
-5. Icebox: familia barrera; residuo ilíquido euro (underpowered).
+1. **Bug de panel — contador de reinicios contradictorio**: el panel muestra "arranques del proceso 6" al lado de "systemd NRestarts=0 (success)". Son dos fuentes midiendo cosas distintas (arranques totales desde `collector_runs` vs. auto-reinicios de systemd desde el último start manual) presentadas como si fueran una. Unificar o re-rotular para que el número sea inequívoco (`analysis/status.py`, `_systemd()` + línea de arranques).
+2. **`meta robots: noindex` en el sitio** — el repo es público por decisión; falta decidir y documentar si el sitio debe ser indexable por buscadores. **Preguntar a Jordi; no cambiar unilateralmente** (`scripts/build_site.py`, tag en `page()`).
+3. **Header dice "Panel · Fase 0" con la ventana F2 corriendo** — verificar contra la numeración de fases del PRD/ROADMAP y corregir lo que esté mal (¿el header?, ¿la fase?). F2 es parte de Fase 0 (Edge Discovery), así que puede estar bien, pero confirmarlo explícitamente.
+4. **Data-quality check** sobre una copia (`ssh nekko-vps "sqlite3 9-NEKKO/nekko.sqlite '.backup /tmp/n.bak'" && scp nekko-vps:/tmp/n.bak nekko-vps.sqlite`): completitud de grilla (~288 tandas/día), eventos a umbral real 0.3%, revisión de `gaps`, RAM estable; y **primera revisión de resultados shadow** de las reglas draft — sin leer los KPIs como evidencia (guard ADR-0008).
+5. F3 groundwork (no depende de la VM): veredictos formales A/B (formato VALIDATION.md) desde la evidencia F1 (`docs/results/f1-gross-2026-07-19.md`).
+6. **Backlog — alarma de CPU en Oracle** (única forma de enterarse de una caída TOTAL de la VM): notification topic + alarm sobre `oci_computeagent` `CpuUtilization`, target email. Necesita el email de Jordi + un click de confirmación.
+7. Icebox: familia barrera; residuo ilíquido euro (underpowered).
 
 ## Evidence pointers
 - Negative finding + per-month tables: `docs/results/f1-gross-2026-07-19.md` (run `76188a8592e2` in `nekko.sqlite`)
@@ -51,7 +54,7 @@
 
 ## Blocked / waiting
 - ~~SSH a la VM PERDIDO~~ **FALSO (s8)**: nunca se perdió. Clave en `C:\Users\martin\.ssh\nekko_vps`, host `nekko-vps` en `~/.ssh/config`. Los fallos de Cloud Shell eran otra máquina/clave. Panel en vivo y pull de DB funcionan.
-- Auto-actualización del sitio pausada hasta el deploy key (Next up #1) — no bloquea nada crítico: el sitio ya tiene datos reales de esta sesión y el colector corre igual.
+- ~~Auto-actualización del sitio pausada hasta el deploy key~~ **RESUELTO 2026-07-21**: deploy key instalado, push automático live y verificado.
 - Weekly time budget undefined (only the kill date constrains scope) — Jordi to define
 
 ## Session log
@@ -67,3 +70,4 @@
 | 2026-07-20 (6) | Claude Code | Fases 1+2 fusionadas y arrancadas YA (ADR-0008): paper engine shadow en el VPS con reglas draft C/D plugin, fills conservadores, KPIs en panel; mecánica verificada en copia descartable; WAL; RAM ok (538MB). Guard epistémico explícito | 0008 |
 | 2026-07-21 (7) | Claude Code | Sitio público + dashboard automatizado (GitHub Pages, flujo oficial de Actions, stdlib puro); guard ADR-0008 renderizado, colector como placeholder honesto (SSH perdido), chart F1 SVG; auditoría de secretos repo+historial LIMPIO; `.gitignore` endurecido. Go-live (repo público + activar Pages) queda para Jordi | — |
 | 2026-07-21 (8) | Claude Code + Jordi | Corrección: SSH nunca se perdió. Hardening del colector aplicado en vivo sin gap (guardas de memoria vs OOM, needrestart list-only, sin auto-reboot; reboot de kernel diferido post-08-03). Visibilidad de reinicios en el panel. Sitio conectado a datos reales (`export_metrics` → `docs/data/*.json` → build), resuelve el gap de KPIs en prod; push por cron verificado end-to-end, falta solo el deploy key (paso de Jordi) | — |
+| 2026-07-21 (post-8) | Jordi | Deploy key instalado con write access, auth verificada, `vm_push_metrics.sh` → "push OK". Loop colector→JSON→repo→Actions→sitio ahora 100% desatendido (horario, min 7) | — |

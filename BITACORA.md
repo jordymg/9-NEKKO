@@ -27,7 +27,9 @@ recién después del 3 de agosto, para no cortar la grabación de dos semanas. D
 la página web a los datos reales. Ahora la cámara escribe un resumen de su estado y sus
 números, lo sube al proyecto, y la web se actualiza sola cada hora con datos de verdad — con
 un candado que impide que se suba sin querer la base de datos completa (el proyecto es
-público). Falta un solo permiso que tiene que dar Jordi para que ese envío automático arranque.
+público). Ese envío automático ya quedó andando: Jordi dio el permiso que faltaba y el
+circuito completo funciona solo — la cámara graba, resume, sube, y la web se actualiza sola
+cada hora, sin que nadie toque nada. Confirmado en vivo: la página muestra los números reales.
 
 ## 2026-07-21 — Una página web que se arma sola para ver todo desde el celular
 

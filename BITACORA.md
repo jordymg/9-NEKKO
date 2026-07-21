@@ -13,6 +13,22 @@ ventaja existe, y recién después, si existe, construir algo que la use. Pusimo
 límite: el 12 de agosto. Si para entonces los datos no muestran nada prometedor, el proyecto
 se archiva y no pasa nada — averiguar que no hay ventaja también es un buen resultado.
 
+## 2026-07-21 (2) — La página ya muestra números de verdad, y blindamos la cámara
+
+Primero una aclaración: creíamos haber perdido la llave del servidor en la nube, pero no —
+estaba guardada todo el tiempo en la compu; lo que había fallado eran intentos desde otra
+máquina distinta. Con acceso normal, hicimos dos cosas. Una: blindar la "cámara" que graba
+los precios. Habíamos visto en su diario de a bordo que una vez el sistema la había apagado
+de golpe por quedarse sin memoria, y que las actualizaciones automáticas la reiniciaban y le
+cortaban internet un ratito. Le pusimos topes de memoria (para que ante un pico se frene en
+vez de que la maten), le dijimos a las actualizaciones que no reinicien nada ni prendan y
+apaguen la máquina sola, y dejamos anotado que el reinicio grande que quedó pendiente se hace
+recién después del 3 de agosto, para no cortar la grabación de dos semanas. Dos: conectamos
+la página web a los datos reales. Ahora la cámara escribe un resumen de su estado y sus
+números, lo sube al proyecto, y la web se actualiza sola cada hora con datos de verdad — con
+un candado que impide que se suba sin querer la base de datos completa (el proyecto es
+público). Falta un solo permiso que tiene que dar Jordi para que ese envío automático arranque.
+
 ## 2026-07-21 — Una página web que se arma sola para ver todo desde el celular
 
 Le hicimos al proyecto una página web pública, pensada para leer desde el teléfono: muestra
@@ -20,13 +36,11 @@ en qué anda todo — la fase, los hallazgos, el piloto de práctica — con un 
 prolijo. Lo lindo es que se arma sola: cada vez que cambiamos algo, un robot de GitHub la
 vuelve a generar y publicar sin que toquemos nada. Pusimos especial cuidado en dos cosas de
 honestidad: los resultados del piloto de práctica salen dentro de un recuadro amarillo bien
-grande que avisa "estos números son de prueba, no cuentan", y como perdimos la llave para
-entrar al servidor en la nube, la parte del estado en vivo dice claramente "sin acceso por
-ahora" en vez de inventar números. Antes de abrirla al público revisamos que no se colara
-ninguna contraseña ni dato secreto en todo el historial del proyecto: limpio. Ya está
-online. Una salvedad honesta: los números en vivo del piloto todavía no se ven en la web,
-porque quedaron guardados adentro del servidor al que perdimos la llave — la página lo dice
-en vez de inventarlos, y queda pendiente conectar esa cañería cuando recuperemos el acceso.
+grande que avisa "estos números son de prueba, no cuentan", y la parte del estado en vivo,
+que ese día todavía no estaba conectada, mostraba "esperando datos" en vez de inventar
+números. Antes de abrirla al público revisamos que no se colara ninguna contraseña ni dato
+secreto en todo el historial del proyecto: limpio. Ya está online. (Nota del día siguiente:
+ese "todavía no conectado" quedó resuelto — ver la entrada del 21/07 sobre datos reales.)
 
 ## 2026-07-20 (2) — Le agregamos un piloto de práctica
 

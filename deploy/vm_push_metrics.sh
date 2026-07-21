@@ -15,18 +15,17 @@ export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/nekko_deploy -o IdentitiesOnly=yes"
 
 log() { echo "$(date -u +%FT%TZ) $*"; }
 
-# 1) copia consistente de la DB (no leer la DB caliente en pleno write)
-sqlite3 "$DB" ".backup $TMP" || { log "backup fallo"; exit 1; }
-
-# 2) generar los JSON dentro del clone (usando el código + venv del colector)
-cd "$REPO" || exit 1
-.venv/bin/python -m analysis.export_metrics --db "$TMP" --out "$SITE/docs/data" \
-  || { log "export fallo"; rm -f "$TMP"; exit 1; }
-rm -f "$TMP"
-
-# 3) traer cambios remotos (solo la VM escribe docs/data → rebase limpio)
+# 1) traer cambios remotos con el árbol LIMPIO (antes de escribir nada)
 cd "$SITE" || exit 1
 git pull --rebase -q origin main || { log "pull fallo"; exit 1; }
+
+# 2) copia consistente de la DB (no leer la DB caliente en pleno write)
+sqlite3 "$DB" ".backup $TMP" || { log "backup fallo"; exit 1; }
+
+# 3) generar los JSON dentro del clone (usando el código + venv del colector)
+( cd "$REPO" && .venv/bin/python -m analysis.export_metrics --db "$TMP" --out "$SITE/docs/data" ) \
+  || { log "export fallo"; rm -f "$TMP"; exit 1; }
+rm -f "$TMP"
 
 # 4) stagear SOLO los JSON de datos
 git add docs/data/collector_status.json docs/data/paper_kpis.json

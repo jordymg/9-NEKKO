@@ -108,14 +108,18 @@ def main() -> None:
     # end_est = último snapshot del mercado (ts + tte_hours). Cuenta cuántos
     # mercados YA trackeados vencen antes del cierre. No incluye mercados que
     # se abran de acá al cierre → también es un piso para el total.
-    rows = q("""
-        SELECT market_id, ts + CAST(tte_hours*3600000 AS INTEGER) AS end_est
-        FROM snapshots s
-        WHERE s.ts = (SELECT MAX(ts) FROM snapshots s2 WHERE s2.market_id = s.market_id)
-        GROUP BY market_id
-    """).fetchall()
+    # Join contra el MAX(ts) por mercado (una pasada por idx_snap_market): O(n),
+    # no correlacionado. El GROUP BY interno colapsa cualquier ts duplicado.
     close_ms = int(CLOSE.timestamp() * 1000)
-    expire_by_close = sum(1 for _, e in rows if e is not None and e <= close_ms)
+    expire_by_close = q("""
+        SELECT COUNT(*) FROM (
+            SELECT s.ts + CAST(s.tte_hours*3600000 AS INTEGER) AS end_est
+            FROM snapshots s
+            JOIN (SELECT market_id AS mid, MAX(ts) AS mts FROM snapshots GROUP BY market_id) m
+              ON s.market_id = m.mid AND s.ts = m.mts
+            GROUP BY s.market_id
+        ) WHERE end_est IS NOT NULL AND end_est <= ?
+    """, (close_ms,)).fetchone()[0]
 
     def _fmt(ms):
         return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")

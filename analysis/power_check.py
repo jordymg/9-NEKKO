@@ -111,15 +111,18 @@ def main() -> None:
     # Join contra el MAX(ts) por mercado (una pasada por idx_snap_market): O(n),
     # no correlacionado. El GROUP BY interno colapsa cualquier ts duplicado.
     close_ms = int(CLOSE.timestamp() * 1000)
-    expire_by_close = q("""
-        SELECT COUNT(*) FROM (
-            SELECT s.ts + CAST(s.tte_hours*3600000 AS INTEGER) AS end_est
-            FROM snapshots s
-            JOIN (SELECT market_id AS mid, MAX(ts) AS mts FROM snapshots GROUP BY market_id) m
-              ON s.market_id = m.mid AND s.ts = m.mts
-            GROUP BY s.market_id
-        ) WHERE end_est IS NOT NULL AND end_est <= ?
-    """, (close_ms,)).fetchone()[0]
+    end_ests = q("""
+        SELECT s.ts + CAST(s.tte_hours*3600000 AS INTEGER) AS end_est
+        FROM snapshots s
+        JOIN (SELECT market_id AS mid, MAX(ts) AS mts FROM snapshots GROUP BY market_id) m
+          ON s.market_id = m.mid AND s.ts = m.mts
+        GROUP BY s.market_id
+    """).fetchall()
+    end_ests = [e[0] for e in end_ests if e[0] is not None]
+    expire_by_close = sum(1 for e in end_ests if e <= close_ms)
+    # INTEGRIDAD: mercados que YA vencieron (según data) vs. resoluciones registradas.
+    # Si vencieron muchos y no hay resoluciones → el backfill no captura outcomes.
+    expired_now = sum(1 for e in end_ests if e <= max_ts)
 
     def _fmt(ms):
         return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -149,6 +152,15 @@ def main() -> None:
     print(f"  end_est(mercado) = último snapshot: ts + tte_hours")
     print(f"  mercados ya trackeados que vencen ≤ cierre = {expire_by_close}")
     print("  (no incluye mercados que se abran de acá al cierre → también piso del total)")
+    print("-" * 64)
+    print("INTEGRIDAD — outcomes capturados vs. mercados ya vencidos:")
+    print(f"  mercados trackeados YA vencidos (end_est ≤ ahora) = {expired_now}")
+    print(f"  resoluciones registradas para trackeados          = {resolved_tracked}")
+    if expired_now > 0 and resolved_tracked < expired_now * 0.5:
+        print("  *** ALERTA: muchos mercados vencieron pero casi ninguno tiene resolución.")
+        print("      El backfill de outcomes NO está capturando resoluciones. Sin outcomes,")
+        print("      la data F2 no sirve para medir edge. RECUPERABLE: los snapshots guardan")
+        print("      condition_id/token_id → un backfill one-shot desde Gamma trae los outcomes.")
     print("-" * 64)
     print("GATE — el proyecto NO define una barra de 'mercados resueltos' para F2:")
     for label, val, unit in BARS:
